@@ -77,6 +77,7 @@ export const SALONY: Salon[] = [
   s("lazarz", "Barber Łazarz", "uroda", ["barber", "fryzjer"], "Łazarz", "ul. Głogowska", 4.8, 301, 2.9, ["#2B2F36", "#8C6A4F"]),
   s("ink", "Ink Studio", "uroda", ["tatuaz"], "Stare Miasto", "ul. Wodna", 4.9, 158, 1.8, ["#3A3340", "#8A2B4E"]),
   s("wenus", "Salon Wenus", "uroda", ["masaz", "spa", "kosmetologia", "depilacja", "fryzjer", "podologia", "medycyna_estetyczna"], "Grunwald", "ul. Grunwaldzka", 4.6, 77, 3.4, ["#A9C6B8", "#2F5D4E"]),
+  s("slonce", "Studio Słońce", "uroda", ["opalanie", "depilacja"], "Winogrady", "os. Przyjaźni", 4.7, 63, 3.6, ["#D9A066", "#8A4B1E"]),
   // zdrowie
   s("usmiech", "Gabinet Stomatologiczny Uśmiech", "zdrowie", ["stomatologia"], "Jeżyce", "ul. Szamarzewskiego", 4.9, 412, 0.9, ["#2A7A83", "#123F45"]),
   s("medica", "Przychodnia Medica", "zdrowie", ["lekarz", "diagnostyka"], "Grunwald", "ul. Bukowska", 4.7, 268, 2.2, ["#4E8FA0", "#1B4452"]),
@@ -84,14 +85,18 @@ export const SALONY: Salon[] = [
   s("diagnostyka", "Centrum Diagnostyki Wilda", "zdrowie", ["diagnostyka"], "Wilda", "ul. Traugutta", 4.7, 144, 2.5, ["#4A83A0", "#183D52"]),
   s("rownowaga", "Gabinet Psychologiczny Równowaga", "zdrowie", ["psychologia"], "Stare Miasto", "ul. Święty Marcin", 4.9, 76, 1.6, ["#6A97A8", "#24485A"]),
   s("fizjoruch", "Fizjo Ruch", "zdrowie", ["fizjoterapia"], "Wilda", "ul. Hetmańska", 4.9, 190, 3.1, ["#5FA39A", "#1F4E47"]),
+  s("zdrowatalerz", "Gabinet Dietetyczny Zdrowy Talerz", "zdrowie", ["dietetyka"], "Jeżyce", "ul. Mickiewicza", 4.9, 58, 1.0, ["#6FA58C", "#24503C"]),
+  s("mowa", "Gabinet Logopedyczny Mowa", "zdrowie", ["logopedia"], "Grunwald", "ul. Kasprzaka", 4.8, 44, 2.4, ["#5E9AA6", "#1E4750"]),
   // auto
   s("wulkan", "Wulkanizacja Grunwald", "auto", ["opony"], "Grunwald", "ul. Marcelińska", 4.8, 356, 2.6, ["#3E4C5E", "#161D26"]),
   s("serwis60", "Auto Serwis 60", "auto", ["serwis", "opony"], "Jeżyce", "ul. Polna", 4.6, 142, 1.4, ["#56657A", "#222B38"]),
-  s("blysk", "Detailing Błysk", "auto", ["myjnia"], "Łazarz", "ul. Kolejowa", 4.9, 98, 2.8, ["#6B7F99", "#28323F"]),
+  s("blysk", "Detailing Błysk", "auto", ["myjnia", "detailing"], "Łazarz", "ul. Kolejowa", 4.9, 98, 2.8, ["#6B7F99", "#28323F"]),
+  s("skp", "Stacja Kontroli Pojazdów Grunwald", "auto", ["przeglad"], "Grunwald", "ul. Ściegiennego", 4.6, 187, 3.0, ["#4A5A6E", "#1A222E"]),
   // zwierzęta
   s("psieloki", "Groomer Psie Loki", "zwierzeta", ["groomer"], "Jeżyce", "ul. Słowackiego", 4.9, 176, 1.1, ["#C98A3A", "#6E4310"]),
   s("zwierzyniec", "Lecznica Zwierzyniec", "zwierzeta", ["weterynarz"], "Sołacz", "ul. Wojska Polskiego", 4.8, 233, 2.7, ["#B8793E", "#5A3413"]),
   s("kudlaty", "Salon Kudłaty", "zwierzeta", ["groomer"], "Winogrady", "os. Wichrowe Wzgórze", 4.7, 64, 3.9, ["#D9A15B", "#7C4E14"]),
+  s("psiprzystanek", "Psi Przystanek", "zwierzeta", ["opieka_zwierzat", "szkolenie_psow"], "Strzeszyn", "ul. Koszalińska", 4.9, 92, 4.2, ["#C4924E", "#664014"]),
   // sport
   s("padel", "Padel Club Poznań", "sport", ["korty"], "Grunwald", "ul. Reymonta", 4.8, 310, 2.9, ["#3F8F5A", "#16402A"]),
   s("korty", "Korty Golęcin", "sport", ["korty"], "Golęcin", "ul. Golęcińska", 4.7, 205, 3.3, ["#5A9E6C", "#1F4A2E"]),
@@ -100,10 +105,20 @@ export const SALONY: Salon[] = [
   s("start", "Szkoła Jazdy Start", "nauka", ["jazda"], "Jeżyce", "ul. Dąbrowskiego", 4.8, 402, 1.3, ["#4F5BA6", "#1E2560"]),
   s("liczby", "Korepetycje Liczby", "nauka", ["korepetycje"], "Online", "zajęcia zdalne", 4.9, 87, 0, ["#6671C0", "#2B326F"]),
   s("english", "English Corner", "nauka", ["korepetycje"], "Stare Miasto", "ul. Półwiejska", 4.8, 143, 1.7, ["#7A84CF", "#353D80"]),
+  s("nuta", "Szkoła Muzyczna Nuta", "nauka", ["muzyka"], "Jeżyce", "ul. Szamarzewskiego", 4.9, 71, 0.9, ["#5B66B3", "#232A66"]),
+  s("fala", "Szkoła Pływania Fala", "nauka", ["plywanie"], "Chwiałka", "ul. Spychalskiego", 4.8, 129, 3.2, ["#4F7FB0", "#1D3A5E"]),
   // dom
   s("czysto", "Czysto Poznań", "dom", ["sprzatanie"], "Cały Poznań", "dojazd do klienta", 4.8, 298, 0, ["#5E7F8C", "#253C45"]),
   s("raczka", "Złota Rączka Marek", "dom", ["zlota_raczka"], "Cały Poznań", "dojazd do klienta", 4.9, 156, 0, ["#6F8E99", "#2E4852"]),
   s("hydro", "Hydraulik 24", "dom", ["hydraulik"], "Cały Poznań", "dojazd do klienta", 4.7, 211, 0, ["#4F7280", "#1C3640"]),
+  s("klucz", "Ślusarz Klucz 24h", "dom", ["slusarz"], "Cały Poznań", "dojazd do klienta", 4.8, 167, 0, ["#5A6F7A", "#22343C"]),
+  s("iskra", "Elektryk Iskra", "dom", ["elektryk"], "Cały Poznań", "dojazd do klienta", 4.8, 102, 0, ["#62808C", "#26404A"]),
+  s("agdserwis", "AGD Serwis Poznań", "dom", ["serwis_agd"], "Cały Poznań", "dojazd do klienta", 4.6, 138, 0, ["#58727E", "#213740"]),
+  // czas wolny
+  s("zagadka", "Escape Room Zagadka", "czas_wolny", ["escape_room"], "Stare Miasto", "ul. Garbary", 4.9, 512, 1.5, ["#7A3E8E", "#35163F"]),
+  s("strike", "Kręgielnia Strike", "czas_wolny", ["kregle"], "Grunwald", "ul. Bukowska", 4.6, 284, 2.3, ["#8A4A9C", "#3B1A45"]),
+  s("parowka", "Balia i Sauna Nad Wartą", "czas_wolny", ["sauna"], "Śródka", "ul. Śródka", 4.9, 146, 2.0, ["#94608F", "#442541"]),
+  s("tor", "Gokarty Tor Poznań", "czas_wolny", ["gokarty"], "Franowo", "ul. Szwedzka", 4.7, 331, 6.5, ["#6E3A7E", "#2E1236"]),
 ];
 
 export const salon = (id: string) => SALONY.find((x) => x.id === id)!;
@@ -120,6 +135,19 @@ export const CENA_BAZOWA: Record<string, number> = {
   kort_padel: 12000, kort_tenis: 9000, squash: 7000, trening_personalny: 15000, zajecia_jogi: 5000,
   jazda_doszkalajaca: 13000, korepetycje_matematyka: 9000, lekcja_angielskiego: 9000, sprzatanie_mieszkania: 22000,
   zlota_raczka: 12000, hydraulik: 15000,
+  manicure_meski: 8000, balayage: 45000, przedluzanie_wlosow: 90000, strzyzenie_dzieciece: 5000, masaz_kobido: 22000,
+  drenaz_limfatyczny: 18000, opalanie_natryskowe: 12000, wybielanie_zebow: 90000, konsultacja_ortodontyczna: 20000,
+  ekstrakcja_zeba: 30000, przeglad_zebow_dziecka: 15000, konsultacja_pediatryczna: 22000, konsultacja_okulistyczna: 25000,
+  konsultacja_laryngologiczna: 25000, konsultacja_endokrynologiczna: 28000, konsultacja_urologiczna: 25000,
+  konsultacja_neurologiczna: 28000, konsultacja_psychiatryczna: 35000, terapia_manualna: 20000, wizyta_osteopatyczna: 25000,
+  fala_uderzeniowa: 15000, sesja_psychoterapii: 22000, konsultacja_dietetyczna: 18000, terapia_logopedyczna: 15000,
+  serwis_klimatyzacji: 25000, geometria_kol: 15000, diagnostyka_komputerowa: 12000, czyszczenie_wnetrza_auta: 35000,
+  polerowanie_lakieru: 80000, powloka_ceramiczna: 200000, badanie_techniczne: 9900, szczepienie_zwierzecia: 12000,
+  opieka_dzienna_psa: 8000, hotel_dla_zwierzat: 9000, trening_posluszenstwa: 15000, konsultacja_behawiorysty: 25000,
+  lekcja_niemieckiego: 9000, lekcja_hiszpanskiego: 9000, egzamin_osmoklasisty: 9000, przygotowanie_matura: 10000,
+  lekcja_gitary: 9000, lekcja_pianina: 10000, nauka_plywania: 8000, mycie_okien: 25000, pranie_tapicerki: 25000,
+  otwarcie_drzwi: 25000, wymiana_zamka: 30000, wizyta_elektryka: 15000, naprawa_agd: 18000, escape_room: 16000,
+  tor_kregle: 12000, stol_bilard: 5000, sauna_prywatna: 30000, gokarty: 6000,
 };
 
 const okno = (id: string, salonId: string, uslugaKod: string, dzien: "dziś" | "jutro", godzina: string): Okienko => {
@@ -147,6 +175,13 @@ export const OKIENKA: Okienko[] = [
   okno("o17", "liczby", "korepetycje_matematyka", "dziś", "18:00"),
   okno("o18", "czysto", "sprzatanie_mieszkania", "jutro", "9:00"),
   okno("o19", "hydro", "hydraulik", "dziś", "17:00"),
+  okno("o20", "zagadka", "escape_room", "dziś", "19:30"),
+  okno("o21", "strike", "tor_kregle", "dziś", "20:00"),
+  okno("o22", "parowka", "sauna_prywatna", "jutro", "18:00"),
+  okno("o23", "skp", "badanie_techniczne", "dziś", "16:15"),
+  okno("o24", "zdrowatalerz", "konsultacja_dietetyczna", "jutro", "12:00"),
+  okno("o25", "slonce", "opalanie_natryskowe", "dziś", "17:45"),
+  okno("o26", "klucz", "otwarcie_drzwi", "dziś", "15:00"),
 ];
 
 /**
@@ -188,6 +223,7 @@ const KOLORY_BRANZ: Record<Branza, [string, string][]> = {
   sport: [["#3F8F5A", "#16402A"], ["#5A9E6C", "#1F4A2E"]],
   nauka: [["#4F5BA6", "#1E2560"], ["#6671C0", "#2B326F"]],
   dom: [["#5E7F8C", "#253C45"], ["#6F8E99", "#2E4852"], ["#4F7280", "#1C3640"]],
+  czas_wolny: [["#7A3E8E", "#35163F"], ["#8A4A9C", "#3B1A45"], ["#94608F", "#442541"]],
 };
 
 /** Zapytanie wstawiane po kliknięciu kategorii na starcie. */
@@ -200,14 +236,26 @@ const ZAPYTANIE_KATEGORII: Partial<Record<Kategoria, string>> = {
   opony: "wymiana opon dziś", serwis: "wymiana oleju jutro", myjnia: "myjnia dziś", groomer: "groomer jutro",
   weterynarz: "weterynarz dziś", korty: "kort do padla dziś po 19", trener: "trener dziś", jazda: "jazda doszkalająca jutro",
   korepetycje: "korepetycje matematyka dziś", sprzatanie: "sprzątanie jutro", zlota_raczka: "złota rączka dziś",
-  hydraulik: "hydraulik dziś",
+  hydraulik: "hydraulik dziś", opalanie: "opalanie natryskowe dziś", spa: "rytuał spa jutro",
+  makijaz_permanentny: "makijaż permanentny brwi jutro", podologia: "podolog jutro", dietetyka: "dietetyk jutro",
+  logopedia: "logopeda jutro", detailing: "czyszczenie wnętrza auta jutro", przeglad: "przegląd techniczny dziś",
+  opieka_zwierzat: "opieka nad psem jutro", szkolenie_psow: "szkolenie psa w weekend", muzyka: "lekcja gitary jutro",
+  plywanie: "nauka pływania w weekend", slusarz: "ślusarz teraz", elektryk: "elektryk dziś", serwis_agd: "pralka jutro",
+  escape_room: "escape room dziś po 18 dla 4 osób", kregle: "kręgle dziś po 19 dla 6 osób",
+  sauna: "balia w weekend dla 4 osób", gokarty: "gokarty dziś po 17 dla 2 osób",
 };
 
+/** Na starcie wszystkie kategorie; najpopularniejsze najpierw. */
 const KATEGORIE_NA_STARCIE_KOLEJNOSC: Kategoria[] = [
-  "paznokcie", "rzesy", "brwi", "fryzjer", "barber", "masaz", "makijaz", "kosmetologia", "tatuaz",
-  "stomatologia", "lekarz", "diagnostyka", "fizjoterapia", "psychologia",
-  "opony", "serwis", "myjnia", "groomer", "weterynarz", "korty", "trener", "jazda", "korepetycje",
-  "sprzatanie", "zlota_raczka", "hydraulik",
+  "paznokcie", "rzesy", "brwi", "fryzjer", "barber", "masaz", "makijaz", "kosmetologia", "depilacja", "spa",
+  "podologia", "makijaz_permanentny", "medycyna_estetyczna", "tatuaz", "opalanie",
+  "stomatologia", "lekarz", "fizjoterapia", "diagnostyka", "psychologia", "dietetyka", "logopedia",
+  "opony", "serwis", "przeglad", "myjnia", "detailing",
+  "groomer", "weterynarz", "opieka_zwierzat", "szkolenie_psow",
+  "korty", "trener",
+  "jazda", "korepetycje", "muzyka", "plywanie",
+  "hydraulik", "slusarz", "elektryk", "serwis_agd", "sprzatanie", "zlota_raczka",
+  "escape_room", "kregle", "sauna", "gokarty",
 ];
 
 export interface KategoriaNaStarcie {

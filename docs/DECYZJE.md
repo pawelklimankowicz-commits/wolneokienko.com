@@ -65,8 +65,8 @@ oferty na żywo na start przez odświeżanie co kilka sekund.
 - Wysyłka z **konta SMSAPI Prometheusa**. Saldo punktów jest wspólne z powiadomieniami
   Prometheusa — właściciel potwierdził.
 - Nazwa nadawcy: **WolneOkno** (limit SMSAPI to 11 znaków, „WolneOkienko” ma 12).
-  Zgłoszona w SMSAPI 30.09.2026, czeka na zatwierdzenie. Do tego czasu SMS-y wychodzą
-  z nazwą domyślną konta („Prometheus”).
+  Zgłoszona i zatwierdzona w SMSAPI 30.09.2026. Aplikacja podaje ją przy każdej wysyłce;
+  domyślną nazwą konta zostaje „Prometheus” (powiadomienia Prometheusa bez zmian).
 - Konto odrzuca SMS-y z linkiem, także z samą domeną, więc kody idą bez adresu strony.
 
 ## 4. Zadatek — NIE w fazie 1
@@ -137,4 +137,15 @@ procedura DAC7, umowa z przedstawicielami.
 - Dokumenty w `docs/prawne/`, przygotowane samodzielnie na wzór rozwiązań Booksy i Fixly (bez kopiowania tekstów).
 - Dyktowanie zapytań głosem przez rozpoznawanie mowy wbudowane w przeglądarkę (bez płatnego serwisu); opisane w polityce prywatności.
 - Czcionki serwowane z aplikacji, bez Google Fonts.
+
+## 10. Rozbudowa katalogu (30.09.2026)
+
+Właściciel zatwierdził wszystkie propozycje z analizy. Katalog: 8 branż, 47 kategorii, 120 usług.
+- Nowa branża **Czas wolny**: escape room, kręgle i bilard, sauna i balia, gokarty; zapytanie ma liczbę osób.
+- Zdrowie: pediatra, okulista, laryngolog, endokrynolog, urolog, neurolog, psychiatra; wybielanie, ortodonta, usunięcie zęba, zęby dziecka; terapia manualna, osteopata, fala uderzeniowa, psychoterapia; dietetyk, logopeda.
+- Auto: klimatyzacja, geometria, diagnostyka komputerowa, detailing, przegląd techniczny.
+- Zwierzęta: szczepienie, opieka dzienna i hotel, szkolenie psa, behawiorysta.
+- Nauka: niemiecki, hiszpański, egzamin ósmoklasisty, matura, gitara, pianino, nauka pływania.
+- Dom: mycie okien, pranie tapicerki, ślusarz, elektryk, serwis AGD.
+- Uroda: opalanie natryskowe, Kobido, drenaż, balayage, przedłużanie włosów, strzyżenie dziecięce, manicure męski.
 

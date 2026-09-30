@@ -3,7 +3,7 @@ import { KANDYDACI_PODGLAD } from "@/dane/przyklad";
 import { zaplanujFale } from "@/domain/fale";
 import { KATALOG_USLUG, branzaUslugi, czyMedyczna, opisBranzy, uslugiBranzy, type Branza, type Usluga } from "@/domain/katalog-uslug";
 import { useDyktowanie } from "@/lib/dyktowanie";
-import { km } from "@/lib/format";
+import { km, odmiana } from "@/lib/format";
 import { parsujZapytanie, type Kiedy } from "@/lib/parsuj-zapytanie";
 import { Ikona } from "@/ui/Ikona";
 import { NaglowekEkranu } from "@/ui/wspolne";
@@ -16,6 +16,8 @@ export interface WyslaneZapytanie {
   odGodziny: number | null;
   limitZl: number | null;
   tryb: TrybWyboru;
+  /** tylko „Czas wolny”: rezerwacja dla grupy */
+  liczbaOsob: number | null;
   liczbaWykonawcow: number;
   promienKm: number;
 }
@@ -28,6 +30,7 @@ const KIEDY: { wartosc: Kiedy; etykieta: string }[] = [
 ];
 const GODZINY: (number | null)[] = [null, 8, 12, 16, 18];
 const LIMITY: (number | null)[] = [null, 100, 150, 200, 300];
+const OSOBY = [2, 3, 4, 5, 6, 8];
 
 export function Zapytanie({
   tekstPoczatkowy,
@@ -49,6 +52,7 @@ export function Zapytanie({
   const [kiedy, setKiedy] = useState<Kiedy>(poczatek.kiedy ?? "dzis");
   const [odGodziny, setOdGodziny] = useState<number | null>(poczatek.odGodziny);
   const [limitZl, setLimitZl] = useState<number | null>(poczatek.limitZl);
+  const [osoby, setOsoby] = useState<number>(poczatek.osoby ?? 2);
   const [tryb, setTryb] = useState<TrybWyboru>("zbieram");
   const [zgodaZdrowie, setZgodaZdrowie] = useState(false);
 
@@ -61,6 +65,7 @@ export function Zapytanie({
     if (r.kiedy) setKiedy(r.kiedy);
     if (r.odGodziny !== null) setOdGodziny(r.odGodziny);
     if (r.limitZl !== null) setLimitZl(r.limitZl);
+    if (r.osoby !== null) setOsoby(r.osoby);
   };
 
   // Dyktowanie dopisuje się do tego, co już było w polu przed dotknięciem mikrofonu.
@@ -163,6 +168,19 @@ export function Zapytanie({
           </div>
         </fieldset>
 
+        {branza === "czas_wolny" && (
+          <fieldset className="grupa">
+            <legend>Ile osób</legend>
+            <div className="chipy">
+              {OSOBY.map((n) => (
+                <button key={n} type="button" aria-pressed={osoby === n} className={`chip ${osoby === n ? "chip-wybrany" : ""}`} onClick={() => setOsoby(n)}>
+                  {n === 8 ? "8 i więcej" : `${n} ${odmiana(n, "osoba", "osoby", "osób")}`}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+        )}
+
         <fieldset className="grupa">
           <legend>Ile chcesz wydać</legend>
           <div className="chipy">
@@ -220,7 +238,10 @@ export function Zapytanie({
           type="button"
           className="btn btn-duzy"
           disabled={!moznaWyslac}
-          onClick={() => usluga && onWyslij({ usluga, kiedy, odGodziny, limitZl, tryb, liczbaWykonawcow, promienKm: plan.promienKm })}
+          onClick={() =>
+            usluga &&
+            onWyslij({ usluga, kiedy, odGodziny, limitZl, tryb, liczbaOsob: branza === "czas_wolny" ? osoby : null, liczbaWykonawcow, promienKm: plan.promienKm })
+          }
         >
           {!usluga ? "Wybierz usługę" : medyczna && !zgodaZdrowie ? "Zaznacz zgodę, żeby wysłać" : "Wyślij zapytanie"}
         </button>

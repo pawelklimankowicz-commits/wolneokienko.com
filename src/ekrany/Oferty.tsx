@@ -59,6 +59,7 @@ export function Oferty({
     zapytanie.usluga.nazwa,
     KIEDY_TEKST[zapytanie.kiedy] + (zapytanie.odGodziny !== null ? ` po ${zapytanie.odGodziny}:00` : ""),
     zapytanie.limitZl !== null ? `do ${zapytanie.limitZl} zł` : null,
+    zapytanie.liczbaOsob ? `${zapytanie.liczbaOsob} ${odmiana(zapytanie.liczbaOsob, "osoba", "osoby", "osób")}` : null,
   ].filter(Boolean);
   const n = zapytanie.liczbaWykonawcow;
 

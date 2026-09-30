@@ -31,7 +31,10 @@ i dopasowania są tutaj i mają testy:
 - `wynik-wizyty.ts` — czy wizyta się odbyła, na podstawie zgłoszeń salonu i klientki;
 - `rozliczenie.ts` — rozliczenie rezerwacji (faza 1 bez zadatku, zadatek gotowy na później);
 - `fale.ts` — rozsyłanie zapytań falami, rosnący promień;
-- `katalog-uslug.ts` — usługi, fazy, zasady dla zabiegów iniekcyjnych.
+- `katalog-uslug.ts` — 8 branż, 47 kategorii, 120 usług; wyszukiwanie po synonimach (wygrywa najdłuższe trafienie);
+  zasady dla zabiegów iniekcyjnych;
+- `nieobecnosci.ts` — blokada klientki po nieobecnościach;
+- `rejestracja-salonu.ts` — reguły danych firmy i cennika.
 
 Kwoty zawsze w groszach (liczby całkowite).
 
@@ -75,7 +78,7 @@ wersję bez serwera (logowanie w pamięci, kod 123456) do podglądu w przegląda
 
 Sekrety w `.env.local` (poza gitem): `DATABASE_URL`, `SMSAPI_TOKEN`,
 `KODY_SMS_PIEPRZ` (klucz HMAC kodów — zmiana unieważnia tylko kody w drodze),
-`SMSAPI_NADAWCA` (nazwa nadawcy — dopiero gdy SMSAPI ją zatwierdzi).
+`SMSAPI_NADAWCA` (opcjonalnie; domyślnie „WolneOkno”, zatwierdzone w SMSAPI 30.09.2026).
 
 ## Weryfikacja przed pushem — lokalnie
 

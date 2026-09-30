@@ -25,7 +25,23 @@ describe("parsujZapytanie", () => {
   });
 
   it("pusty tekst nie rozpoznaje niczego", () => {
-    expect(parsujZapytanie("")).toEqual({ uslugi: [], kiedy: null, odGodziny: null, limitZl: null });
+    expect(parsujZapytanie("")).toEqual({ uslugi: [], kiedy: null, odGodziny: null, limitZl: null, osoby: null });
+  });
+
+  it("liczba osób liczbą i słowem, a „do 150 zł” nie myli się z osobami", () => {
+    const r = parsujZapytanie("escape room dziś po 18 dla 4 osób do 200 zł");
+    expect(r.uslugi[0]?.kod).toBe("escape_room");
+    expect(r).toMatchObject({ kiedy: "dzis", odGodziny: 18, limitZl: 200, osoby: 4 });
+    expect(parsujZapytanie("kręgle we czworo jutro").osoby).toBe(4);
+    expect(parsujZapytanie("balia dla dwojga w weekend").osoby).toBe(2);
+    expect(parsujZapytanie("hybryda dziś po 16, do 150 zł").osoby).toBeNull();
+  });
+
+  it("najbardziej konkretna usługa jest pierwsza", () => {
+    expect(parsujZapytanie("przedłużanie włosów jutro").uslugi[0]?.kod).toBe("przedluzanie_wlosow");
+    expect(parsujZapytanie("fizjoterapeuta dziś").uslugi[0]?.kod).toBe("wizyta_fizjoterapeutyczna");
+    expect(parsujZapytanie("dentysta dla dziecka jutro").uslugi[0]?.kod).toBe("przeglad_zebow_dziecka");
+    expect(parsujZapytanie("ślusarz teraz").uslugi[0]?.kod).toBe("otwarcie_drzwi");
   });
 });
 

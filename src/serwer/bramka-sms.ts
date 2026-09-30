@@ -16,19 +16,20 @@ export class BladBramkiSms extends Error {
 }
 
 export const ADRES_SMSAPI = "https://api.smsapi.pl/sms.do";
+/** Nazwa nadawcy Wolnego Okienka w SMSAPI (zatwierdzona 30.09.2026). Domyślną nazwą konta jest „Prometheus”, więc podajemy ją zawsze. */
+export const NADAWCA_SMS = "WolneOkno";
 
 /**
  * SMSAPI (konto Prometheusa). Uwaga: SMSAPI zgłasza błędy (zły numer, brak
  * punktów, nieaktywny nadawca) odpowiedzią HTTP 200 z polem `error`, więc
- * sprawdzamy treść, nie tylko status. Bez `nadawca` SMSAPI użyje nazwy
- * domyślnej konta.
+ * sprawdzamy treść, nie tylko status. Nadawca domyślnie „WolneOkno”.
  */
 export function bramkaSmsapi(opcje: { token: string; nadawca?: string; fetch?: typeof fetch }): BramkaSms {
   const pobierz = opcje.fetch ?? fetch;
   return {
     async wyslij(telefon, tresc) {
       const parametry = new URLSearchParams({ to: telefonDlaSmsapi(telefon), message: tresc, format: "json", encoding: "utf-8" });
-      if (opcje.nadawca) parametry.set("from", opcje.nadawca);
+      parametry.set("from", opcje.nadawca || NADAWCA_SMS);
       const odpowiedz = await pobierz(ADRES_SMSAPI, {
         method: "POST",
         headers: { Authorization: `Bearer ${opcje.token}`, "Content-Type": "application/x-www-form-urlencoded" },

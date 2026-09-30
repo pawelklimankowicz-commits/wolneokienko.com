@@ -23,10 +23,10 @@ describe("bramkaSmsapi", () => {
     expect(cialo.get("format")).toBe("json");
   });
 
-  it("bez nadawcy nie wysyła pola from (SMSAPI bierze domyślną nazwę konta)", async () => {
+  it("bez podanego nadawcy wysyła jako WolneOkno, nigdy jako domyślny „Prometheus” konta", async () => {
     const { f, wywolania } = atrapaFetch(200, { count: 1 });
     await bramkaSmsapi({ token: "T", fetch: f }).wyslij("+48600123123", "x");
-    expect((wywolania[0].init.body as URLSearchParams).has("from")).toBe(false);
+    expect((wywolania[0].init.body as URLSearchParams).get("from")).toBe("WolneOkno");
   });
 
   it("błąd w treści odpowiedzi HTTP 200 to błąd", async () => {

@@ -13,11 +13,12 @@ const POPULARNE: Record<Branza | "wszystkie", string[]> = {
   wszystkie: ["Manicure hybrydowy", "Higienizacja", "Wymiana opon", "Kort do padla"],
   uroda: ["Manicure hybrydowy", "Strzyżenie męskie", "Laminacja brwi", "Masaż relaksacyjny"],
   zdrowie: ["Higienizacja", "Konsultacja dermatologiczna", "Wizyta fizjoterapeutyczna"],
-  auto: ["Wymiana opon", "Mycie ręczne auta"],
+  auto: ["Wymiana opon", "Mycie ręczne auta", "Przegląd techniczny (stacja kontroli)"],
   zwierzeta: ["Strzyżenie psa", "Wizyta u weterynarza"],
   sport: ["Kort do padla", "Trening personalny"],
   nauka: ["Jazda doszkalająca", "Korepetycje z matematyki"],
-  dom: ["Sprzątanie mieszkania", "Wizyta hydraulika"],
+  dom: ["Sprzątanie mieszkania", "Wizyta hydraulika", "Awaryjne otwarcie drzwi"],
+  czas_wolny: ["Escape room, 60 min", "Tor do kręgli, 60 min", "Prywatna sauna lub balia, 2 h"],
 };
 
 export function Okienka({ onRezerwuj, onZapytaj }: { onRezerwuj: (o: Okienko) => void; onZapytaj: (tekst: string, branza?: Branza) => void }) {

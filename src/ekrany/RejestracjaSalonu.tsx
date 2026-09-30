@@ -471,7 +471,7 @@ function EdytorCennika({ api, salon, onZapisano }: { api: KlientApi; salon: Salo
                               inputMode="numeric"
                               aria-label={`Czas — ${u.nazwa}`}
                               value={s.czas}
-                              onChange={(e) => zmien(u.kod, { czas: e.target.value.replace(/\D/g, "").slice(0, 3) })}
+                              onChange={(e) => zmien(u.kod, { czas: e.target.value.replace(/\D/g, "").slice(0, 4) })}
                             />
                             min
                           </span>

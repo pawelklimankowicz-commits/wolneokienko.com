@@ -56,7 +56,8 @@ export interface SalonKonta extends DaneSalonu {
 
 export type BledyDanych = Partial<Record<keyof DaneSalonu, string>>;
 
-export const LIMITY_CENNIKA = { maksPozycji: 80, minCenaGr: 100, maksCenaGr: 10_000_00, minCzasMin: 5, maksCzasMin: 600 } as const;
+/** Czas do doby — hotel dla zwierząt liczy się na doby. */
+export const LIMITY_CENNIKA = { maksPozycji: 80, minCenaGr: 100, maksCenaGr: 10_000_00, minCzasMin: 5, maksCzasMin: 24 * 60 } as const;
 
 const WAGI_NIP = [6, 5, 7, 2, 3, 4, 5, 6, 7];
 
@@ -136,7 +137,7 @@ export function walidujCennik(branza: Branza, pozycje: PozycjaCennika[]): BledyC
     if (!Number.isInteger(p.cenaGr) || p.cenaGr < L.minCenaGr || p.cenaGr > L.maksCenaGr) {
       b.pozycje[p.usluga] = "Podaj cenę od 1 do 10 000 zł.";
     } else if (!Number.isInteger(p.czasMin) || p.czasMin < L.minCzasMin || p.czasMin > L.maksCzasMin) {
-      b.pozycje[p.usluga] = "Podaj czas od 5 minut do 10 godzin.";
+      b.pozycje[p.usluga] = "Podaj czas od 5 minut do 24 godzin.";
     } else if (u.wymagaLekarza && !p.wykonujeLekarz) {
       b.pozycje[p.usluga] = "Ten zabieg może wykonywać tylko lekarz — potwierdź to, żeby go dodać.";
     } else if (u.wymagaDeklaracjiKwalifikacji && ((p.deklaracja ?? "").trim().length < 10 || (p.deklaracja ?? "").length > 300)) {
