@@ -16,7 +16,9 @@ export async function tekstZeZdjecia(plik: Blob, onPostep?: (ulamek: number) => 
     worker = await tesseract.createWorker("pol", 1, {
       workerPath: `${katalog}worker.min.js`,
       corePath: katalog,
-      langPath: katalog,
+      // Tesseract dopisuje „/pol.traineddata.gz”; w podglądzie plik nazywa się pol-slownik.wasm
+      // (vite.config.ts), a dopisek trafia do zapytania po „?” i serwer go pomija
+      langPath: import.meta.env.MODE === "podglad" ? `${katalog}pol-slownik.wasm?` : katalog,
       logger: (m: { status: string; progress: number }) => {
         if (m.status === "recognizing text") onPostep?.(m.progress);
       },

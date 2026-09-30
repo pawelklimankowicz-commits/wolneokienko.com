@@ -15,7 +15,10 @@ const PLIKI_OCR: Record<string, string> = {
   "ocr/pol.traineddata.gz": "node_modules/@tesseract.js-data/pol/4.0.0_best_int/pol.traineddata.gz",
 };
 
-function ocrLokalnie(): Plugin {
+/** Podgląd (artefakt) nie serwuje plików .gz — tam słownik leży pod nazwą .wasm (src/lib/ocr.ts). */
+const SLOWNIK_PODGLADU = "ocr/pol-slownik.wasm";
+
+function ocrLokalnie(podglad: boolean): Plugin {
   return {
     name: "ocr-lokalnie",
     configureServer: (serwer) =>
@@ -26,13 +29,16 @@ function ocrLokalnie(): Plugin {
         createReadStream(path.resolve(__dirname, plik)).pipe(res);
       }),
     generateBundle() {
-      for (const [nazwa, zrodlo] of Object.entries(PLIKI_OCR)) this.emitFile({ type: "asset", fileName: nazwa, source: readFileSync(path.resolve(__dirname, zrodlo)) });
+      for (const [nazwa, zrodlo] of Object.entries(PLIKI_OCR)) {
+        const plik = podglad && nazwa.endsWith(".gz") ? SLOWNIK_PODGLADU : nazwa;
+        this.emitFile({ type: "asset", fileName: plik, source: readFileSync(path.resolve(__dirname, zrodlo)) });
+      }
     },
   };
 }
 
 export default defineConfig(({ mode }) => ({
-  plugins: [react(), apiWolnegoOkienka(), ocrLokalnie()],
+  plugins: [react(), apiWolnegoOkienka(), ocrLokalnie(mode === "podglad")],
   resolve: { alias: { "@": path.resolve(__dirname, "./src") } },
   // Podgląd bez serwera: jeden plik JS i jeden CSS (czcionki i obrazy w środku),
   // ze ścieżkami względnymi — publikowany jako strona z tymi dwoma plikami obok.
