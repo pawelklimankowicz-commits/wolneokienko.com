@@ -17,7 +17,8 @@
 -- dochodzą w osobnej migracji razem z ekranami.
 -- =====================================================================
 
-create extension if not exists postgis;
+-- PostGIS w schemacie `extensions` (zalecenie Supabase: bez tabel rozszerzenia w `public`).
+create extension if not exists postgis with schema extensions;
 
 -- ── Salony ──────────────────────────────────────────────────────────
 create table public.salony (
@@ -26,7 +27,7 @@ create table public.salony (
   nazwa text not null,
   nip text not null unique check (nip ~ '^[0-9]{10}$'),
   adres text not null,
-  lokalizacja geography (point, 4326) not null,
+  lokalizacja extensions.geography (point, 4326) not null,
   przyjmuje_zapytania boolean not null default false,
   wskaznik_odpowiedzi numeric(4, 3) not null default 0.5 check (wskaznik_odpowiedzi between 0 and 1),
   aktywowany_at timestamptz,
@@ -84,7 +85,7 @@ create table public.zapytania (
   tresc text,
   okno_od timestamptz not null,
   okno_do timestamptz not null,
-  lokalizacja geography (point, 4326) not null,
+  lokalizacja extensions.geography (point, 4326) not null,
   limit_ceny_gr integer check (limit_ceny_gr > 0),
   tryb text not null default 'zbieram' check (tryb in ('pierwsza', 'zbieram')),
   promien_km numeric(5, 1),

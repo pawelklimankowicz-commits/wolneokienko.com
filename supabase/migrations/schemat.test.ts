@@ -1,7 +1,7 @@
 // Sprawdza, że migracje wykonują się na czystym Postgresie (PGlite, w procesie).
 // PGlite nie ma PostGIS ani schematu `auth` z Supabase, więc test:
 //  • podstawia minimalny `auth.users`,
-//  • pomija `create extension postgis`, a `geography(point, 4326)` zamienia na `text`
+//  • pomija `create extension postgis`, a `extensions.geography(point, 4326)` zamienia na `text`
 //    i indeks GiST na zwykły.
 // Reszta SQL (typy, klucze, CHECK-i, RLS) wykonuje się bez zmian.
 import { PGlite } from "@electric-sql/pglite";
@@ -12,8 +12,8 @@ const katalog = path.resolve(__dirname);
 
 function dlaPglite(sql: string): string {
   return sql
-    .replace(/create extension if not exists postgis;/gi, "")
-    .replace(/geography\s*\(\s*point\s*,\s*4326\s*\)/gi, "text")
+    .replace(/create extension if not exists postgis[^;]*;/gi, "")
+    .replace(/(extensions\.)?geography\s*\(\s*point\s*,\s*4326\s*\)/gi, "text")
     .replace(/using gist \((\w+)\)/gi, "($1)");
 }
 
