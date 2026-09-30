@@ -124,3 +124,17 @@ procedura DAC7, umowa z przedstawicielami.
   z opisem, kto wykonuje zabieg i z jakimi kwalifikacjami.
 - Dane firmy nie są pobierane automatycznie z białej listy VAT: serwis Ministerstwa
   Finansów blokuje zapytania z serwerów.
+
+## 8. Nieobecności klientek (propozycja z 30.09.2026, do potwierdzenia przez właściciela)
+
+- 3 ostateczne nieobecności w ciągu 12 miesięcy → 90 dni bez możliwości wysyłania zapytań.
+- Odwołanie wizyty w aplikacji, nawet w ostatniej chwili, nie jest nieobecnością.
+- Klientka ma 48 h na sprzeciw wobec zgłoszenia salonu; spór rozstrzyga człowiek.
+- Parametry: `src/domain/nieobecnosci.ts`; opis: regulamin dla klientek, § 8.
+
+## 9. Dokumenty prawne i dyktowanie (30.09.2026)
+
+- Dokumenty w `docs/prawne/`, przygotowane samodzielnie na wzór rozwiązań Booksy i Fixly (bez kopiowania tekstów).
+- Dyktowanie zapytań głosem przez rozpoznawanie mowy wbudowane w przeglądarkę (bez płatnego serwisu); opisane w polityce prywatności.
+- Czcionki serwowane z aplikacji, bez Google Fonts.
+

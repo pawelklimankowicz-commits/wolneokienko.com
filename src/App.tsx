@@ -23,7 +23,7 @@ import { Ikona, type NazwaIkony } from "./ui/Ikona";
 
 type Zakladka = "start" | "okienka" | "wizyty" | "profil";
 type Nakladka =
-  | { typ: "zapytanie"; tekst: string; branza?: Branza }
+  | { typ: "zapytanie"; tekst: string; branza?: Branza; glos?: boolean }
   | { typ: "oferty"; zapytanie: WyslaneZapytanie }
   | { typ: "potwierdzenie"; rezerwacja: Rezerwacja }
   | { typ: "salon" }
@@ -69,7 +69,7 @@ export default function App() {
     return () => clearTimeout(t);
   }, [toast]);
 
-  const zapytaj = useCallback((tekst: string, branza?: Branza) => setNakladka({ typ: "zapytanie", tekst, branza }), []);
+  const zapytaj = useCallback((tekst: string, branza?: Branza, glos?: boolean) => setNakladka({ typ: "zapytanie", tekst, branza, glos }), []);
   const rezerwujOkienko = useCallback(
     (o: Okienko) =>
       poZalogowaniu("Potwierdź numer — potem od razu zarezerwujemy termin.", () =>
@@ -144,6 +144,7 @@ export default function App() {
         <Zapytanie
           tekstPoczatkowy={nakladka.tekst}
           branzaPoczatkowa={nakladka.branza}
+          sluchajOdRazu={nakladka.glos}
           onZamknij={() => setNakladka(null)}
           onWyslij={(z) => poZalogowaniu("Potwierdź numer — potem od razu wyślemy zapytanie.", () => setNakladka({ typ: "oferty", zapytanie: z }))}
         />

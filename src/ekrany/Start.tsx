@@ -3,6 +3,7 @@ import { KATEGORIE, OKIENKA, SALONY, salon, type Okienko } from "@/dane/przyklad
 import { BRANZE, opisBranzy, type Branza } from "@/domain/katalog-uslug";
 import { km, zlote } from "@/lib/format";
 import { Ikona, Znak, type NazwaIkony } from "@/ui/Ikona";
+import { obrazKategorii } from "@/ui/obrazyKategorii";
 import { EtykietaPodgladu, OcenaNaOkladce, OcenaWLinii, Okladka } from "@/ui/wspolne";
 
 const SZYBKIE = [
@@ -17,7 +18,7 @@ export function Start({
   onRezerwuj,
   onWszystkieOkienka,
 }: {
-  onZapytaj: (tekst: string, branza: Branza) => void;
+  onZapytaj: (tekst: string, branza: Branza, glos?: boolean) => void;
   onRezerwuj: (o: Okienko) => void;
   onWszystkieOkienka: () => void;
 }) {
@@ -64,15 +65,21 @@ export function Start({
           ))}
         </div>
 
-        <button type="button" className="kompozytor" onClick={() => onZapytaj("", branza)}>
-          <span className="kompozytor-ikona">
-            <Ikona nazwa="iskra" rozmiar={20} />
-          </span>
-          <span className="kompozytor-tekst">
-            <strong>Czego potrzebujesz i na kiedy?</strong>
-            <span>np. {opis.przyklad}</span>
-          </span>
-        </button>
+        <div className="kompozytor-rzad">
+          <button type="button" className="kompozytor" onClick={() => onZapytaj("", branza)}>
+            <span className="kompozytor-ikona">
+              <Ikona nazwa="iskra" rozmiar={20} />
+            </span>
+            <span className="kompozytor-tekst">
+              <strong>Czego potrzebujesz i na kiedy?</strong>
+              <span>np. {opis.przyklad}</span>
+            </span>
+          </button>
+          <button type="button" className="mikrofon mikrofon-duzy" aria-label="Powiedz, czego szukasz" onClick={() => onZapytaj("", branza, true)}>
+            <Ikona nazwa="mikrofon" rozmiar={28} />
+            <span>Powiedz</span>
+          </button>
+        </div>
 
         <div className="szybkie" role="list">
           {SZYBKIE.map((s) => (
@@ -85,9 +92,15 @@ export function Start({
         <div className="kategorie" role="list" aria-label={`Kategorie: ${opis.nazwa}`}>
           {kategorie.map((k) => (
             <button key={k.kategoria} type="button" role="listitem" className="kategoria" onClick={() => onZapytaj(k.zapytanie, branza)}>
-              <span className="kategoria-kolo" style={{ background: `linear-gradient(145deg, ${k.kolory[0]}, ${k.kolory[1]})` }}>
-                <Ikona nazwa={k.kategoria as NazwaIkony} rozmiar={30} />
-              </span>
+              {obrazKategorii(k.kategoria) ? (
+                <span className="kategoria-kolo kategoria-zdjecie">
+                  <img src={obrazKategorii(k.kategoria)} alt="" width={70} height={70} loading="lazy" decoding="async" />
+                </span>
+              ) : (
+                <span className="kategoria-kolo" style={{ background: `linear-gradient(145deg, ${k.kolory[0]}, ${k.kolory[1]})` }}>
+                  <Ikona nazwa={k.kategoria as NazwaIkony} rozmiar={30} />
+                </span>
+              )}
               <span className="kategoria-etykieta">{k.etykieta}</span>
             </button>
           ))}

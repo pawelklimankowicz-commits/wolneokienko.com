@@ -24,8 +24,8 @@
   --outside: #efe3df;
   --badge-bg: rgba(24, 10, 17, 0.58);
   --badge-ink: #ffffff;
-  --f-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
-  --f-body: "Figtree", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --f-display: "Bricolage Grotesque Variable", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Figtree Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
   --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
   color-scheme: light;
 }
@@ -188,6 +188,8 @@ p { margin: 0; }
   transition: transform 0.15s;
 }
 .kategoria:hover .kategoria-kolo { transform: translateY(-2px); }
+.kategoria-zdjecie { overflow: hidden; background: var(--sunk); box-shadow: 0 0 0 2px var(--surface), 0 0 0 3px var(--line), 0 10px 20px -12px var(--shadow); }
+.kategoria-zdjecie img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .kategoria-etykieta { font-size: 13px; font-weight: 600; }
 
 .tresc { padding: 8px 20px 0; display: flex; flex-direction: column; gap: 14px; }
@@ -603,6 +605,8 @@ p { margin: 0; }
 /* ── Dokumenty prawne ──────────────────────────────────────────────── */
 .nakladka-dokumentu { z-index: 20; }
 .dokument { gap: 14px; }
+/* długa treść nie może zgnieść rzędu zakładek (przewijany kontener ma min-height 0) */
+.dokument > * { flex-shrink: 0; }
 .dokument-tresc { font-size: 15px; line-height: 1.6; overflow-wrap: anywhere; }
 .dokument-tresc h1 { font-size: 26px; font-weight: 800; margin: 4px 0 6px; }
 .dokument-tresc h2 { font-size: 19px; font-weight: 800; margin: 26px 0 8px; }
@@ -618,6 +622,28 @@ p { margin: 0; }
 .dokument-tresc th { background: var(--sunk); font-weight: 700; }
 .dokument-tresc tr:last-child td { border-bottom: 0; }
 .stopka-prawna .link { font-size: inherit; }
+
+/* ── Dyktowanie ────────────────────────────────────────────────────── */
+.kompozytor-rzad { display: flex; gap: 10px; align-items: stretch; }
+.kompozytor-rzad .kompozytor { flex: 1; min-width: 0; }
+.mikrofon {
+  flex: none; border: 0; border-radius: 50%; width: 48px; height: 48px; display: grid; place-items: center;
+  background: var(--lacquer); color: var(--on-lacquer); box-shadow: 0 10px 22px -12px var(--lacquer); position: relative;
+  transition: transform 0.15s;
+}
+.mikrofon:active { transform: scale(0.94); }
+.mikrofon-duzy {
+  width: 76px; height: auto; border-radius: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px; font-weight: 700; font-size: 13px; padding: 10px 0;
+}
+.mikrofon.slucha { background: var(--ink); color: var(--bg); }
+.mikrofon.slucha::after {
+  content: ""; position: absolute; inset: -6px; border-radius: 50%; border: 3px solid var(--lacquer);
+  animation: fala 1.3s ease-out infinite;
+}
+.pole-zapytania .mikrofon { align-self: center; }
+.pole-zapytania.slucha { box-shadow: 0 0 0 4px var(--lacquer-soft), 0 12px 26px -20px var(--shadow); }
+.podpowiedz-glosu { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); margin-top: -10px; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }

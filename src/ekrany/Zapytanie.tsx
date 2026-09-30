@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { KANDYDACI_PODGLAD } from "@/dane/przyklad";
 import { zaplanujFale } from "@/domain/fale";
 import { KATALOG_USLUG, branzaUslugi, czyMedyczna, opisBranzy, uslugiBranzy, type Branza, type Usluga } from "@/domain/katalog-uslug";
+import { useDyktowanie } from "@/lib/dyktowanie";
 import { km } from "@/lib/format";
 import { parsujZapytanie, type Kiedy } from "@/lib/parsuj-zapytanie";
 import { Ikona } from "@/ui/Ikona";
@@ -31,11 +32,14 @@ const LIMITY: (number | null)[] = [null, 100, 150, 200, 300];
 export function Zapytanie({
   tekstPoczatkowy,
   branzaPoczatkowa,
+  sluchajOdRazu = false,
   onWyslij,
   onZamknij,
 }: {
   tekstPoczatkowy: string;
   branzaPoczatkowa?: Branza;
+  /** otwarte przyciskiem mikrofonu na starcie — od razu słuchamy */
+  sluchajOdRazu?: boolean;
   onWyslij: (z: WyslaneZapytanie) => void;
   onZamknij: () => void;
 }) {
@@ -59,6 +63,22 @@ export function Zapytanie({
     if (r.limitZl !== null) setLimitZl(r.limitZl);
   };
 
+  // Dyktowanie dopisuje się do tego, co już było w polu przed dotknięciem mikrofonu.
+  const tekstPrzedDyktowaniem = useRef("");
+  const dyktowanie = useDyktowanie((mowa) => {
+    const przed = tekstPrzedDyktowaniem.current.trim();
+    zmienTekst(przed ? `${przed} ${mowa}` : mowa);
+  });
+  const mikrofon = () => {
+    if (dyktowanie.slucha) return dyktowanie.stop();
+    tekstPrzedDyktowaniem.current = tekst;
+    dyktowanie.start();
+  };
+  const { start: zacznijSluchac } = dyktowanie;
+  useEffect(() => {
+    if (sluchajOdRazu) zacznijSluchac();
+  }, [sluchajOdRazu, zacznijSluchac]);
+
   const usluga = KATALOG_USLUG.find((u) => u.kod === wybranaUsluga) ?? null;
   const branza: Branza = usluga ? branzaUslugi(usluga) : (branzaPoczatkowa ?? "uroda");
   const opis = opisBranzy(branza);
@@ -77,17 +97,36 @@ export function Zapytanie({
     <div className="nakladka">
       <NaglowekEkranu tytul="Nowe zapytanie" onWstecz={onZamknij} />
       <div className="nakladka-tresc">
-        <label className="pole-zapytania">
+        <div className={`pole-zapytania ${dyktowanie.slucha ? "slucha" : ""}`}>
           <Ikona nazwa="iskra" />
           <textarea
             id="tekst-zapytania"
             rows={2}
-            autoFocus
-            placeholder={`np. ${opis.przyklad}`}
+            autoFocus={!sluchajOdRazu}
+            aria-label="Czego potrzebujesz i na kiedy?"
+            placeholder={dyktowanie.slucha ? "Słucham…" : `np. ${opis.przyklad}`}
             value={tekst}
             onChange={(e) => zmienTekst(e.target.value)}
           />
-        </label>
+          <button
+            type="button"
+            className={`mikrofon ${dyktowanie.slucha ? "slucha" : ""}`}
+            aria-label={dyktowanie.slucha ? "Zakończ dyktowanie" : "Powiedz, czego szukasz"}
+            aria-pressed={dyktowanie.slucha}
+            onClick={mikrofon}
+          >
+            <Ikona nazwa="mikrofon" rozmiar={24} />
+          </button>
+        </div>
+        {(dyktowanie.slucha || dyktowanie.blad) && (
+          <p className={dyktowanie.blad ? "blad-pola" : "podpowiedz-glosu"} role="status">
+            {dyktowanie.blad ?? (
+              <>
+                <span className="kropka-live" aria-hidden="true" /> Słucham… powiedz np. „{opis.przyklad}”
+              </>
+            )}
+          </p>
+        )}
 
         <fieldset className="grupa">
           <legend>Usługa · {opis.nazwa}</legend>

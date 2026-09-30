@@ -23,6 +23,7 @@ const SCIEZKI = {
   prezent: <><rect x="3" y="8" width="18" height="4" rx="1" /><path d="M12 8v13M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7" /><path d="M7.5 8a2.5 2.5 0 0 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 0 1 0 5" /></>,
   salon: <><path d="M3 9.5 5 4h14l2 5.5" /><path d="M4 9.5V20h16V9.5" /><path d="M3 9.5a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0" /><path d="M10 20v-5h4v5" /></>,
   telefon: <><rect x="6" y="2" width="12" height="20" rx="3" /><path d="M11 18h2" /></>,
+  mikrofon: <><rect x="9" y="2.5" width="6" height="12" rx="3" /><path d="M5 11a7 7 0 0 0 14 0" /><path d="M12 18v3.5" /></>,
   tarcza: <path d="M12 22s8-3.5 8-10V5l-8-3-8 3v7c0 6.5 8 10 8 10Z" />,
   // kategorie
   paznokcie: <><rect x="8" y="10" width="8" height="11" rx="2.5" /><rect x="10" y="3" width="4" height="7" rx="1" /></>,

@@ -5,7 +5,7 @@ import type { NazwaDokumentu } from "@/domain/dokumenty";
 import { Markdown } from "@/lib/markdown";
 import { NaglowekEkranu } from "@/ui/wspolne";
 
-const PLIKI = import.meta.glob<string>("../../docs/prawne/*.md", { query: "?raw", import: "default" });
+const PLIKI = import.meta.glob<string>(["../../docs/prawne/*.md", "!**/README.md"], { query: "?raw", import: "default" });
 
 const DOKUMENTY: { nazwa: NazwaDokumentu; etykieta: string }[] = [
   { nazwa: "regulamin-klientki", etykieta: "Regulamin" },
