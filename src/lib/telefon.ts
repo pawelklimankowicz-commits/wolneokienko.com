@@ -15,3 +15,15 @@ export function normalizujTelefon(tekst: string): string | null {
 export function telefonDlaSmsapi(telefon: string): string {
   return telefon.replace(/^\+/, "");
 }
+
+/** „+48503090523” → „+48 503 090 523”. */
+export function telefonCzytelny(telefon: string): string {
+  const m = telefon.match(/^\+48(\d{3})(\d{3})(\d{3})$/);
+  return m ? `+48 ${m[1]} ${m[2]} ${m[3]}` : telefon;
+}
+
+/** Wpisywany numer bez +48, w grupach po trzy cyfry: „503090523” → „503 090 523”. */
+export function grupujNumer(tekst: string): string {
+  const cyfry = tekst.replace(/\D/g, "").replace(/^(?:0048|48)(?=\d{9})/, "").slice(0, 9);
+  return cyfry.replace(/(\d{3})(?=\d)/g, "$1 ");
+}

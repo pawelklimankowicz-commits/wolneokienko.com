@@ -3,7 +3,7 @@ import type { PGlite } from "@electric-sql/pglite";
 import type { Baza } from "./baza";
 import { bazaTestowa } from "./baza-testowa";
 import { BladBramkiSms, type BramkaSms } from "./bramka-sms";
-import { PARAMETRY_KODOW, ponowZaSek, sprawdzKod, trescSms, wyslijKod } from "./kody-sms";
+import { PARAMETRY_KODOW, czekanieNaLimit, ponowZaSek, sprawdzKod, trescSms, wyslijKod } from "./kody-sms";
 import { sesjaZTokenu, utworzSesje, wyloguj } from "./sesje";
 
 const PIEPRZ = "pieprz-testowy";
@@ -141,6 +141,51 @@ describe("kod SMS", () => {
     expect(ponowZaSek(wczesniej.slice(1), teraz)).toBe(0);
   });
 
+  it("limit na adres IP: 20 kodów na godzinę, niezależnie od numeru", async () => {
+    const { sms, wyslane } = bramka();
+    const T = new Date("2026-11-01T10:00:00Z");
+    const o = (sek: number) => new Date(T.getTime() + sek * 1000);
+    for (let i = 0; i < PARAMETRY_KODOW.limitIpNaGodzine; i++) {
+      expect((await wyslijKod({ baza, sms, pieprz: PIEPRZ, telefon: nowyNumer(), ip: "203.0.113.7", teraz: o(i) })).ok).toBe(true);
+    }
+    expect(await wyslijKod({ baza, sms, pieprz: PIEPRZ, telefon: nowyNumer(), ip: "203.0.113.7", teraz: o(60) })).toEqual({
+      ok: false,
+      powod: "za_czesto",
+      ponowZaSek: 60 * 60 - 60,
+    });
+    // inny adres przechodzi, a w bazie nie ma adresu wprost
+    expect((await wyslijKod({ baza, sms, pieprz: PIEPRZ, telefon: nowyNumer(), ip: "198.51.100.1", teraz: o(61) })).ok).toBe(true);
+    expect(wyslane).toHaveLength(PARAMETRY_KODOW.limitIpNaGodzine + 1);
+    const [{ ze_skrotem, inne }] = await baza<{ ze_skrotem: number; inne: number }>(
+      "select count(*) filter (where ip_skrot ~ '^[0-9a-f]{64}$')::int as ze_skrotem, count(*) filter (where ip_skrot !~ '^[0-9a-f]{64}$')::int as inne from public.kody_sms",
+    );
+    expect(ze_skrotem).toBe(PARAMETRY_KODOW.limitIpNaGodzine + 1);
+    expect(inne).toBe(0);
+  });
+
+  it("bezpiecznik: po 200 kodach w godzinie wysyłka staje dla wszystkich", async () => {
+    const T = new Date("2026-12-01T10:00:00Z");
+    await baza(
+      `insert into public.kody_sms (telefon, kod_skrot, wygasa_at, created_at)
+       select '+48700' || lpad(g::text, 6, '0'), 'x', $1::timestamptz, $1::timestamptz - make_interval(secs => g)
+       from generate_series(1, $2::int) g`,
+      [T.toISOString(), PARAMETRY_KODOW.limitLacznyNaGodzine],
+    );
+    const { sms, wyslane } = bramka();
+    const blad = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await wyslijKod({ baza, sms, pieprz: PIEPRZ, telefon: nowyNumer(), teraz: T })).toEqual({ ok: false, powod: "przeciazenie" });
+    blad.mockRestore();
+    expect(wyslane).toHaveLength(0);
+    // godzinę później znowu można
+    expect((await wyslijKod({ baza, sms, pieprz: PIEPRZ, telefon: nowyNumer(), teraz: new Date(T.getTime() + 60 * 60 * 1000) })).ok).toBe(true);
+  });
+
+  it("czekanieNaLimit liczy, kiedy najstarsze zdarzenie wypadnie z okna", () => {
+    expect(czekanieNaLimit([po(0), po(10)], 3, 60, po(20))).toBe(0);
+    expect(czekanieNaLimit([po(0), po(10), po(15)], 3, 60, po(20))).toBe(40);
+    expect(czekanieNaLimit([po(-100), po(10), po(15)], 3, 60, po(20))).toBe(0);
+  });
+
   it("błąd bramki: klientka dostaje komunikat, a kod nie zużywa limitu", async () => {
     const tel = nowyNumer();
     const zepsuta: BramkaSms = {
@@ -188,7 +233,7 @@ describe("sesje", () => {
     const { token } = await utworzSesje({ baza, kontoId, teraz: T0 });
     const [w] = await baza<{ token_skrot: string }>("select token_skrot from public.sesje where konto_id = $1", [kontoId]);
     expect(w.token_skrot).not.toBe(token);
-    expect(await sesjaZTokenu({ baza, token, teraz: po(60) })).toEqual({ kontoId, rola: "klientka" });
+    expect(await sesjaZTokenu({ baza, token, teraz: po(60) })).toEqual({ kontoId, rola: "klientka", telefon: expect.stringMatching(/^\+48600000\d{3}$/) });
     await wyloguj({ baza, token, teraz: po(120) });
     expect(await sesjaZTokenu({ baza, token, teraz: po(121) })).toBeNull();
   });

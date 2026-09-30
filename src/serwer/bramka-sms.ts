@@ -1,4 +1,4 @@
-import { telefonDlaSmsapi } from "./telefon";
+import { telefonDlaSmsapi } from "../lib/telefon";
 
 /** Wysyłka SMS-ów. W produkcji SMSAPI, w testach atrapa zapisująca wiadomości. */
 export interface BramkaSms {

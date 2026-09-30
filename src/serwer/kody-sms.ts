@@ -8,7 +8,7 @@
 import { czas, type Baza } from "./baza";
 import { BladBramkiSms, type BramkaSms } from "./bramka-sms";
 import { hmacSha256, losowyKod, rowneStaloczasowo } from "./kryptografia";
-import { normalizujTelefon } from "./telefon";
+import { normalizujTelefon } from "../lib/telefon";
 
 export const PARAMETRY_KODOW = {
   dlugosc: 6,
@@ -22,6 +22,10 @@ export const PARAMETRY_KODOW = {
   oknoSek: 15 * 60,
   /** …i 10 na dobę na jeden numer */
   limitDobowy: 10,
+  /** z jednego adresu IP najwyżej 20 kodów na godzinę (sieci komórkowe dzielą adresy, stąd zapas) */
+  limitIpNaGodzine: 20,
+  /** bezpiecznik na saldo SMSAPI: łącznie najwyżej 200 kodów na godzinę */
+  limitLacznyNaGodzine: 200,
 } as const;
 
 export type Rola = "klientka" | "salon" | "operator";
@@ -30,18 +34,20 @@ export type WynikWyslania =
   | { ok: true; telefon: string; wygasaAt: Date }
   | { ok: false; powod: "zly_numer" }
   | { ok: false; powod: "za_czesto"; ponowZaSek: number }
-  | { ok: false; powod: "blad_bramki" };
+  | { ok: false; powod: "przeciazenie" | "blad_bramki" };
 
 export type WynikSprawdzenia =
-  | { ok: true; kontoId: string; rola: Rola; nowe: boolean }
+  | { ok: true; kontoId: string; rola: Rola; telefon: string; nowe: boolean }
   | { ok: false; powod: "zly_numer" | "brak_kodu" | "wygasl" | "za_duzo_prob" }
   | { ok: false; powod: "zly_kod"; pozostaloProb: number };
 
-const DOBA_SEK = 24 * 60 * 60;
+const GODZINA_SEK = 60 * 60;
+const DOBA_SEK = 24 * GODZINA_SEK;
 const sekundyMiedzy = (od: Date, doCzasu: Date) => (doCzasu.getTime() - od.getTime()) / 1000;
 const plus = (data: Date, sek: number) => new Date(data.getTime() + sek * 1000);
 
 export const skrotKodu = (pieprz: string, telefon: string, kod: string) => hmacSha256(pieprz, `${telefon}:${kod}`);
+const skrotIp = (pieprz: string, ip: string) => hmacSha256(pieprz, `ip:${ip}`);
 
 /**
  * Treść SMS-a bez polskich znaków — mieści się w jednej wiadomości (160 znaków
@@ -55,25 +61,25 @@ export function trescSms(kod: string): string {
 }
 
 /**
+ * Limit „najwyżej `limit` w oknie”: po ilu sekundach zmieści się jeszcze jedno
+ * zdarzenie, gdy `wczesniejsze` to czasy poprzednich. 0 = można teraz.
+ */
+export function czekanieNaLimit(wczesniejsze: Date[], limit: number, oknoSek: number, teraz: Date): number {
+  const wOknie = wczesniejsze.filter((t) => sekundyMiedzy(t, teraz) < oknoSek).sort((a, b) => a.getTime() - b.getTime());
+  // tyle najstarszych musi wypaść z okna
+  const nadmiar = wOknie.length - (limit - 1);
+  return nadmiar > 0 ? Math.max(0, Math.ceil(oknoSek - sekundyMiedzy(wOknie[nadmiar - 1], teraz))) : 0;
+}
+
+/**
  * Po ilu sekundach numer może dostać kolejny kod, gdy `wczesniejsze` to czasy
- * wysłania kodów z ostatniej doby (bez bieżącej próby). 0 = można teraz.
+ * wysłania kodów na ten numer z ostatniej doby (bez bieżącej próby). 0 = można teraz.
  */
 export function ponowZaSek(wczesniejsze: Date[], teraz: Date): number {
   const p = PARAMETRY_KODOW;
-  const rosnaco = [...wczesniejsze].sort((a, b) => a.getTime() - b.getTime());
-  let czekaj = 0;
-  const ostatni = rosnaco.at(-1);
-  if (ostatni) czekaj = Math.max(czekaj, p.odstepSek - sekundyMiedzy(ostatni, teraz));
-  // limit „n w oknie”: ile najstarszych musi wypaść z okna, żeby zmieścił się jeszcze jeden
-  for (const [limit, okno] of [
-    [p.limitWOknie, p.oknoSek],
-    [p.limitDobowy, DOBA_SEK],
-  ] as const) {
-    const wOknie = rosnaco.filter((t) => sekundyMiedzy(t, teraz) < okno);
-    const nadmiar = wOknie.length - (limit - 1);
-    if (nadmiar > 0) czekaj = Math.max(czekaj, okno - sekundyMiedzy(wOknie[nadmiar - 1], teraz));
-  }
-  return Math.max(0, Math.ceil(czekaj));
+  const ostatni = Math.max(...wczesniejsze.map((t) => t.getTime()));
+  const odstep = wczesniejsze.length ? Math.ceil(p.odstepSek - (teraz.getTime() - ostatni) / 1000) : 0;
+  return Math.max(0, odstep, czekanieNaLimit(wczesniejsze, p.limitWOknie, p.oknoSek, teraz), czekanieNaLimit(wczesniejsze, p.limitDobowy, DOBA_SEK, teraz));
 }
 
 export async function wyslijKod(opcje: {
@@ -81,6 +87,8 @@ export async function wyslijKod(opcje: {
   sms: BramkaSms;
   pieprz: string;
   telefon: string;
+  /** adres IP prośby — do limitu na adres; w bazie tylko jego HMAC */
+  ip?: string | null;
   teraz?: Date;
 }): Promise<WynikWyslania> {
   const { baza, sms, pieprz } = opcje;
@@ -94,21 +102,35 @@ export async function wyslijKod(opcje: {
   // Najpierw rezerwujemy miejsce (wstawiamy kod), potem liczymy. Dwie
   // równoczesne prośby widzą nawzajem swoje wiersze, więc limit nie przecieka
   // — w najgorszym razie obie zostaną odrzucone.
+  const ipSkrot = opcje.ip ? await skrotIp(pieprz, opcje.ip) : null;
   const [{ id }] = await baza<{ id: string }>(
-    `insert into public.kody_sms (telefon, kod_skrot, wygasa_at, created_at)
-     values ($1, $2, $3::timestamptz, $4::timestamptz) returning id`,
-    [telefon, await skrotKodu(pieprz, telefon, kod), czas(wygasaAt), czas(teraz)],
+    `insert into public.kody_sms (telefon, kod_skrot, wygasa_at, created_at, ip_skrot)
+     values ($1, $2, $3::timestamptz, $4::timestamptz, $5) returning id`,
+    [telefon, await skrotKodu(pieprz, telefon, kod), czas(wygasaAt), czas(teraz), ipSkrot],
   );
-  const inne = await baza<{ created_at: Date | string }>(
-    `select created_at from public.kody_sms
-     where telefon = $1 and id <> $2 and created_at > $3::timestamptz and created_at <= $4::timestamptz`,
-    [telefon, id, czas(plus(teraz, -DOBA_SEK)), czas(teraz)],
+  const godzinaTemu = czas(plus(teraz, -GODZINA_SEK));
+  const inne = await baza<{ created_at: Date | string; ten_numer: boolean; ten_ip: boolean | null }>(
+    `select created_at, telefon = $1 as ten_numer, ip_skrot = $3 as ten_ip
+     from public.kody_sms
+     where id <> $2 and created_at <= $4::timestamptz
+       and ((telefon = $1 and created_at > $5::timestamptz) or (ip_skrot = $3 and created_at > $6::timestamptz))`,
+    [telefon, id, ipSkrot, czas(teraz), czas(plus(teraz, -DOBA_SEK)), godzinaTemu],
+  );
+  const [{ n: wszystkie }] = await baza<{ n: number }>(
+    "select count(*)::int as n from public.kody_sms where id <> $1 and created_at > $2::timestamptz and created_at <= $3::timestamptz",
+    [id, godzinaTemu, czas(teraz)],
   );
   const usun = () => baza("delete from public.kody_sms where id = $1", [id]);
 
-  const czekaj = ponowZaSek(
-    inne.map((w) => new Date(w.created_at)),
-    teraz,
+  if (wszystkie >= PARAMETRY_KODOW.limitLacznyNaGodzine) {
+    await usun();
+    console.error(`Bezpiecznik SMS: ${wszystkie} kodów w ostatniej godzinie, wstrzymuję wysyłkę.`);
+    return { ok: false, powod: "przeciazenie" };
+  }
+  const czasy = (filtr: (w: (typeof inne)[number]) => boolean) => inne.filter(filtr).map((w) => new Date(w.created_at));
+  const czekaj = Math.max(
+    ponowZaSek(czasy((w) => w.ten_numer), teraz),
+    czekanieNaLimit(czasy((w) => w.ten_ip === true), PARAMETRY_KODOW.limitIpNaGodzine, GODZINA_SEK, teraz),
   );
   if (czekaj > 0) {
     await usun();
@@ -191,5 +213,5 @@ export async function sprawdzKod(opcje: {
     [proba.id, czas(teraz), rola],
   );
   if (!konto) return { ok: false, powod: "brak_kodu" };
-  return { ok: true, kontoId: konto.id, rola: konto.rola, nowe: konto.nowe };
+  return { ok: true, kontoId: konto.id, rola: konto.rola, telefon, nowe: konto.nowe };
 }

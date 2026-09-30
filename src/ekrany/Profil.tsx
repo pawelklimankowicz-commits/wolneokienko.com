@@ -1,5 +1,6 @@
+import type { Konto } from "@/lib/api";
+import { telefonCzytelny } from "@/lib/telefon";
 import { Ikona, type NazwaIkony } from "@/ui/Ikona";
-import { EtykietaPodgladu } from "@/ui/wspolne";
 
 const MENU: { etykieta: string; ikona: NazwaIkony }[] = [
   { etykieta: "Twoje dane", ikona: "profil" },
@@ -8,21 +9,47 @@ const MENU: { etykieta: string; ikona: NazwaIkony }[] = [
   { etykieta: "Regulamin i prywatność", ikona: "tarcza" },
 ];
 
-export function Profil({ onSalon, onInfo }: { onSalon: () => void; onInfo: (tekst: string) => void }) {
+export function Profil({
+  konto,
+  onZaloguj,
+  onWyloguj,
+  onSalon,
+  onInfo,
+}: {
+  konto: Konto | null;
+  onZaloguj: () => void;
+  onWyloguj: () => void;
+  onSalon: () => void;
+  onInfo: (tekst: string) => void;
+}) {
   return (
     <div className="ekran ekran-jasny">
       <header className="profil-naglowek">
         <span className="profil-awatar" aria-hidden="true">
-          A
+          <Ikona nazwa="profil" rozmiar={30} />
         </span>
         <div>
-          <h1>Anna</h1>
-          <p className="wyciszony">
-            +48 600 *** 123 · <span className="zweryfikowany">zweryfikowany</span>
-          </p>
+          <h1>{konto ? "Twoje konto" : "Twój profil"}</h1>
+          {konto ? (
+            <p className="profil-telefon">
+              <span className="nie-lam">{telefonCzytelny(konto.telefon)}</span>
+              <span className="zweryfikowany">
+                <Ikona nazwa="ok" rozmiar={15} /> numer zweryfikowany
+              </span>
+            </p>
+          ) : (
+            <p className="wyciszony">Zaloguj się numerem telefonu — bez hasła.</p>
+          )}
         </div>
       </header>
-      <EtykietaPodgladu />
+
+      {!konto && (
+        <div className="profil-akcje">
+          <button type="button" className="btn btn-duzy" onClick={onZaloguj}>
+            Zaloguj się
+          </button>
+        </div>
+      )}
 
       <section className="baner-polecen">
         <div>
@@ -53,6 +80,12 @@ export function Profil({ onSalon, onInfo }: { onSalon: () => void; onInfo: (teks
           </span>
           <Ikona nazwa="dalej" rozmiar={18} className="menu-strzalka" />
         </button>
+        {konto && (
+          <button type="button" className="menu-wyloguj" onClick={onWyloguj}>
+            <Ikona nazwa="wstecz" />
+            <span>Wyloguj się</span>
+          </button>
+        )}
       </nav>
     </div>
   );

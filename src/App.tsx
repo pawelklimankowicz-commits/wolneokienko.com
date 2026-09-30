@@ -1,8 +1,11 @@
 // Aplikacja klientki (cztery zakładki) i podgląd aplikacji salonu.
 // Faza 1: dane przykładowe (src/dane/przyklad.ts); logika prowizji, fal
 // i rozbioru zapytań to te same moduły, które pójdą na produkcję.
+// Logowanie jest prawdziwe (src/lib/api.ts → src/serwer/api.ts): numer
+// potwierdzamy dopiero wtedy, gdy klientka wysyła zapytanie albo rezerwuje.
 import { useCallback, useEffect, useState } from "react";
 import { salon, type Oferta, type Okienko } from "./dane/przyklad";
+import { Logowanie } from "./ekrany/Logowanie";
 import { Okienka } from "./ekrany/Okienka";
 import { Oferty } from "./ekrany/Oferty";
 import { Potwierdzenie, type Rezerwacja } from "./ekrany/Potwierdzenie";
@@ -12,6 +15,7 @@ import { Start } from "./ekrany/Start";
 import { Wizyty } from "./ekrany/Wizyty";
 import { Zapytanie, type WyslaneZapytanie } from "./ekrany/Zapytanie";
 import type { Branza } from "./domain/katalog-uslug";
+import { api, type Konto } from "./lib/api";
 import { Ikona, type NazwaIkony } from "./ui/Ikona";
 
 type Zakladka = "start" | "okienka" | "wizyty" | "profil";
@@ -35,6 +39,23 @@ export default function App() {
   const [zakladka, setZakladka] = useState<Zakladka>("start");
   const [nakladka, setNakladka] = useState<Nakladka>(null);
   const [toast, setToast] = useState<string | null>(null);
+  /** undefined — jeszcze sprawdzamy sesję */
+  const [konto, setKonto] = useState<Konto | null | undefined>(undefined);
+  /** logowanie leży nad bieżącym ekranem, więc zamknięcie nie gubi wpisanego zapytania */
+  const [logowanie, setLogowanie] = useState<{ powod?: string; potem: () => void } | null>(null);
+
+  useEffect(() => {
+    let aktualne = true;
+    api.ja().then((k) => aktualne && setKonto(k));
+    return () => {
+      aktualne = false;
+    };
+  }, []);
+
+  const poZalogowaniu = useCallback(
+    (powod: string, potem: () => void) => (konto ? potem() : setLogowanie({ powod, potem })),
+    [konto],
+  );
 
   useEffect(() => {
     if (!toast) return;
@@ -43,12 +64,16 @@ export default function App() {
   }, [toast]);
 
   const zapytaj = useCallback((tekst: string, branza?: Branza) => setNakladka({ typ: "zapytanie", tekst, branza }), []);
-  const rezerwujOkienko = useCallback((o: Okienko) => {
-    setNakladka({
-      typ: "potwierdzenie",
-      rezerwacja: { salon: salon(o.salonId), usluga: o.usluga, dzien: o.dzien, godzina: o.godzina, cenaGr: o.cenaGr },
-    });
-  }, []);
+  const rezerwujOkienko = useCallback(
+    (o: Okienko) =>
+      poZalogowaniu("Potwierdź numer — potem od razu zarezerwujemy termin.", () =>
+        setNakladka({
+          typ: "potwierdzenie",
+          rezerwacja: { salon: salon(o.salonId), usluga: o.usluga, dzien: o.dzien, godzina: o.godzina, cenaGr: o.cenaGr },
+        }),
+      ),
+    [poZalogowaniu],
+  );
 
   const zapytanieWToku = nakladka?.typ === "oferty" ? nakladka.zapytanie : null;
   const wybierzOferte = useCallback(
@@ -76,7 +101,19 @@ export default function App() {
         )}
         {zakladka === "okienka" && <Okienka onRezerwuj={rezerwujOkienko} onZapytaj={zapytaj} />}
         {zakladka === "wizyty" && <Wizyty onZapytaj={(t) => zapytaj(t)} onInfo={setToast} />}
-        {zakladka === "profil" && <Profil onSalon={() => setNakladka({ typ: "salon" })} onInfo={setToast} />}
+        {zakladka === "profil" && (
+          <Profil
+            konto={konto ?? null}
+            onZaloguj={() => setLogowanie({ potem: () => setToast("Zalogowano.") })}
+            onWyloguj={async () => {
+              await api.wyloguj();
+              setKonto(null);
+              setToast("Wylogowano.");
+            }}
+            onSalon={() => setNakladka({ typ: "salon" })}
+            onInfo={setToast}
+          />
+        )}
       </main>
 
       {nakladka === null && (
@@ -101,7 +138,7 @@ export default function App() {
           tekstPoczatkowy={nakladka.tekst}
           branzaPoczatkowa={nakladka.branza}
           onZamknij={() => setNakladka(null)}
-          onWyslij={(z) => setNakladka({ typ: "oferty", zapytanie: z })}
+          onWyslij={(z) => poZalogowaniu("Potwierdź numer — potem od razu wyślemy zapytanie.", () => setNakladka({ typ: "oferty", zapytanie: z }))}
         />
       )}
       {nakladka?.typ === "oferty" && (
@@ -118,6 +155,18 @@ export default function App() {
         />
       )}
       {nakladka?.typ === "salon" && <Salon onWyjdz={() => setNakladka(null)} />}
+      {logowanie && (
+        <Logowanie
+          api={api}
+          powod={logowanie.powod}
+          onZamknij={() => setLogowanie(null)}
+          onZalogowano={(k) => {
+            setKonto(k);
+            setLogowanie(null);
+            logowanie.potem();
+          }}
+        />
+      )}
 
       {toast && (
         <div className="toast" role="status">

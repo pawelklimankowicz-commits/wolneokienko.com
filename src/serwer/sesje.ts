@@ -8,6 +8,12 @@ import { base64url, losoweBajty, sha256 } from "./kryptografia";
 
 export const PARAMETRY_SESJI = { waznoscDni: 90 } as const;
 
+export interface SesjaKonta {
+  kontoId: string;
+  rola: Rola;
+  telefon: string;
+}
+
 const wygasaOd = (teraz: Date) => new Date(teraz.getTime() + PARAMETRY_SESJI.waznoscDni * 24 * 60 * 60 * 1000);
 
 export async function utworzSesje(opcje: { baza: Baza; kontoId: string; teraz?: Date }): Promise<{ token: string; wygasaAt: Date }> {
@@ -23,17 +29,17 @@ export async function utworzSesje(opcje: { baza: Baza; kontoId: string; teraz?: 
 }
 
 /** Konto zalogowane tym tokenem albo null (brak, wygasła, wylogowana). */
-export async function sesjaZTokenu(opcje: { baza: Baza; token: string; teraz?: Date }): Promise<{ kontoId: string; rola: Rola } | null> {
+export async function sesjaZTokenu(opcje: { baza: Baza; token: string; teraz?: Date }): Promise<SesjaKonta | null> {
   const teraz = opcje.teraz ?? new Date();
   if (!/^[A-Za-z0-9_-]{43}$/.test(opcje.token)) return null;
-  const [sesja] = await opcje.baza<{ konto_id: string; rola: Rola }>(
+  const [sesja] = await opcje.baza<{ konto_id: string; rola: Rola; telefon: string }>(
     `update public.sesje s set ostatnio_at = $2::timestamptz, wygasa_at = $3::timestamptz
      from public.konta k
      where s.token_skrot = $1 and s.uniewazniona_at is null and s.wygasa_at > $2::timestamptz and k.id = s.konto_id
-     returning s.konto_id, k.rola`,
+     returning s.konto_id, k.rola, k.telefon`,
     [await sha256(opcje.token), czas(teraz), czas(wygasaOd(teraz))],
   );
-  return sesja ? { kontoId: sesja.konto_id, rola: sesja.rola } : null;
+  return sesja ? { kontoId: sesja.konto_id, rola: sesja.rola, telefon: sesja.telefon } : null;
 }
 
 export async function wyloguj(opcje: { baza: Baza; token: string; teraz?: Date }): Promise<void> {

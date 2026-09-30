@@ -1,4 +1,4 @@
-import { normalizujTelefon, telefonDlaSmsapi } from "./telefon";
+import { grupujNumer, normalizujTelefon, telefonCzytelny, telefonDlaSmsapi } from "./telefon";
 
 describe("normalizujTelefon", () => {
   it("przyjmuje typowe zapisy polskiego numeru", () => {
@@ -19,5 +19,19 @@ describe("normalizujTelefon", () => {
 
   it("SMSAPI dostaje numer bez plusa", () => {
     expect(telefonDlaSmsapi("+48600123123")).toBe("48600123123");
+  });
+});
+
+describe("zapis numeru na ekranie", () => {
+  it("numer międzynarodowy w grupach", () => {
+    expect(telefonCzytelny("+48503090523")).toBe("+48 503 090 523");
+  });
+
+  it("pole numeru grupuje cyfry, zdejmuje 48 z wklejonego numeru i ucina nadmiar", () => {
+    expect(grupujNumer("503")).toBe("503");
+    expect(grupujNumer("5030")).toBe("503 0");
+    expect(grupujNumer("503090523")).toBe("503 090 523");
+    expect(grupujNumer("+48 503-090-523")).toBe("503 090 523");
+    expect(grupujNumer("5030905231234")).toBe("503 090 523");
   });
 });
