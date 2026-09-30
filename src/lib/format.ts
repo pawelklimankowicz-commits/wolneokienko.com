@@ -19,3 +19,8 @@ export function odmiana(n: number, jeden: string, kilka: string, wiele: string):
 /** 600 → „10:00”. */
 export const mmss = (sek: number) =>
   `${String(Math.floor(Math.max(sek, 0) / 60)).padStart(2, "0")}:${String(Math.max(sek, 0) % 60).padStart(2, "0")}`;
+/** „8:40” → 520 (minuty od północy). */
+export const minutyGodziny = (godzina: string) => {
+  const [h, m] = godzina.split(":").map(Number);
+  return h * 60 + (m || 0);
+};

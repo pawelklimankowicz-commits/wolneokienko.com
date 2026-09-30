@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { KATEGORIE, OKIENKA, SALONY, salon, type Okienko } from "@/dane/przyklad";
+import { BRANZE, opisBranzy, type Branza } from "@/domain/katalog-uslug";
 import { km, zlote } from "@/lib/format";
 import { Ikona, Znak, type NazwaIkony } from "@/ui/Ikona";
 import { EtykietaPodgladu, OcenaNaOkladce, OcenaWLinii, Okladka } from "@/ui/wspolne";
@@ -15,11 +17,16 @@ export function Start({
   onRezerwuj,
   onWszystkieOkienka,
 }: {
-  onZapytaj: (tekst: string) => void;
+  onZapytaj: (tekst: string, branza: Branza) => void;
   onRezerwuj: (o: Okienko) => void;
   onWszystkieOkienka: () => void;
 }) {
-  const ulubione = [SALONY[0], SALONY[2], SALONY[1]];
+  const [branza, setBranza] = useState<Branza>("uroda");
+  const opis = opisBranzy(branza);
+  const kategorie = KATEGORIE.filter((k) => k.branza === branza);
+  const okienka = OKIENKA.filter((o) => salon(o.salonId).branza === branza);
+  const ulubione = SALONY.filter((x) => x.branza === branza).slice(0, 3);
+
   return (
     <div className="ekran">
       <section className="hero">
@@ -41,27 +48,43 @@ export function Start({
           <em>jeszcze dziś?</em>
         </h1>
 
-        <button type="button" className="kompozytor" onClick={() => onZapytaj("")}>
+        <div className="branze" role="tablist" aria-label="Branża">
+          {BRANZE.map((b) => (
+            <button
+              key={b.id}
+              type="button"
+              role="tab"
+              aria-selected={branza === b.id}
+              className={`branza ${branza === b.id ? "aktywna" : ""}`}
+              onClick={() => setBranza(b.id)}
+            >
+              <Ikona nazwa={b.id as NazwaIkony} rozmiar={18} />
+              {b.nazwa}
+            </button>
+          ))}
+        </div>
+
+        <button type="button" className="kompozytor" onClick={() => onZapytaj("", branza)}>
           <span className="kompozytor-ikona">
             <Ikona nazwa="iskra" rozmiar={20} />
           </span>
           <span className="kompozytor-tekst">
             <strong>Czego potrzebujesz i na kiedy?</strong>
-            <span>np. hybryda dziś po 16, do 150 zł</span>
+            <span>np. {opis.przyklad}</span>
           </span>
         </button>
 
         <div className="szybkie" role="list">
           {SZYBKIE.map((s) => (
-            <button key={s.etykieta} type="button" role="listitem" className="chip" onClick={() => onZapytaj(s.tekst)}>
+            <button key={s.etykieta} type="button" role="listitem" className="chip" onClick={() => onZapytaj(s.tekst, branza)}>
               {s.etykieta}
             </button>
           ))}
         </div>
 
-        <div className="kategorie" role="list" aria-label="Kategorie">
-          {KATEGORIE.map((k) => (
-            <button key={k.kategoria} type="button" role="listitem" className="kategoria" onClick={() => onZapytaj(k.zapytanie)}>
+        <div className="kategorie" role="list" aria-label={`Kategorie: ${opis.nazwa}`}>
+          {kategorie.map((k) => (
+            <button key={k.kategoria} type="button" role="listitem" className="kategoria" onClick={() => onZapytaj(k.zapytanie, branza)}>
               <span className="kategoria-kolo" style={{ background: `linear-gradient(145deg, ${k.kolory[0]}, ${k.kolory[1]})` }}>
                 <Ikona nazwa={k.kategoria as NazwaIkony} rozmiar={30} />
               </span>
@@ -73,6 +96,12 @@ export function Start({
 
       <section className="tresc">
         <EtykietaPodgladu />
+        {opis.medyczna && (
+          <p className="info-medyczna">
+            <Ikona nazwa="tarcza" rozmiar={18} />
+            W zdrowiu pokazujemy tylko termin, cenę i adres. Bez promocji i płatnych wyróżnień, kolejność według terminu.
+          </p>
+        )}
 
         <div className="sekcja-naglowek">
           <h2>
@@ -84,7 +113,7 @@ export function Start({
           </button>
         </div>
         <div className="karuzela">
-          {OKIENKA.slice(0, 5).map((o) => {
+          {okienka.map((o) => {
             const s = salon(o.salonId);
             return (
               <article key={o.id} className="karta-okienka">
@@ -98,7 +127,8 @@ export function Start({
                 <div className="karta-okienka-tresc">
                   <h3>{o.usluga}</h3>
                   <p className="wyciszony">
-                    {s.nazwa} · {km(s.km)}
+                    {s.nazwa}
+                    {s.km > 0 ? ` · ${km(s.km)}` : ` · ${s.adres}`}
                   </p>
                   <div className="karta-okienka-dol">
                     <span className="cena">{zlote(o.cenaGr)}</span>
@@ -113,15 +143,15 @@ export function Start({
         </div>
 
         <div className="sekcja-naglowek">
-          <h2>Twoje salony</h2>
+          <h2>Polecane w okolicy</h2>
         </div>
         <div className="karuzela">
           {ulubione.map((s) => (
             <article key={s.id} className="karta-salonu">
               <Okladka salon={s} wysokosc={150}>
                 <OcenaNaOkladce salon={s} />
-                <button type="button" className="btn btn-na-okladce" onClick={() => onZapytaj(`${s.nazwa}: dziś`)}>
-                  Zapytaj ponownie
+                <button type="button" className="btn btn-na-okladce" onClick={() => onZapytaj("dziś", branza)}>
+                  Zapytaj o termin
                 </button>
               </Okladka>
               <h3>{s.nazwa}</h3>
@@ -140,10 +170,10 @@ export function Start({
               <strong>Piszesz, czego potrzebujesz.</strong> Usługa, dzień, godzina i ile chcesz wydać.
             </li>
             <li>
-              <strong>Salony z wolnym czasem odpowiadają.</strong> Konkretna godzina i cena w kilka minut.
+              <strong>Ci, którzy mają wolny czas, odpowiadają.</strong> Konkretna godzina i cena w kilka minut.
             </li>
             <li>
-              <strong>Wybierasz i idziesz.</strong> Płacisz w salonie, bez przedpłat.
+              <strong>Wybierasz i idziesz.</strong> Płacisz na miejscu, bez przedpłat.
             </li>
           </ol>
         </section>

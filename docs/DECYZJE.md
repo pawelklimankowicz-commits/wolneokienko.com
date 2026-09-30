@@ -21,18 +21,36 @@ https://claude.ai/artifact/SMFywkP4VAqLcTv8F2WEqa
   żadnych płatności od klientek. Nieopłacona faktura po terminie wstrzymuje salonowi
   zapytania.
 
-## 3. Fazy
+## 3. Branże i fazy
 
-| Faza | Zakres |
+**Decyzja z 30.09.2026: aplikacja obsługuje od razu wszystkie branże z wolnymi okienkami:**
+uroda, zdrowie (dentysta, lekarz, badania, fizjoterapia, psycholog), auto (opony, serwis,
+myjnia), zwierzęta (groomer, weterynarz), sport (korty, trener, joga), nauka (nauka jazdy,
+korepetycje), dom (sprzątanie, złota rączka, hydraulik). Katalog: `src/domain/katalog-uslug.ts`.
+
+Fazy określają już tylko zasięg geograficzny i kolejność pozyskiwania usługodawców:
+
+| Faza | Zasięg |
 |---|---|
-| F1 | MVP: Poznań, paznokcie. Start przed grudniowym szczytem. |
-| F2 | Poznań, wszystkie usługi salonu beauty (w tym toksyna botulinowa i wypełniacze, jeśli salon je oferuje). |
+| F1 | Poznań. Start przed grudniowym szczytem. |
 | F3 | Wszystkie miasta wojewódzkie. |
 | F4 | Wszystkie miasta powiatowe. |
 | F5 | Gminy i wsie. |
-| F6 | Inne branże z wolnymi okienkami, na czele z dentystami i lekarzami. |
 
-Faza 0 (test ręczny) pominięta — testem jest F1.
+Faza 0 (test ręczny) pominięta — testem jest F1. Dawne F2 (całe beauty) i F6 (inne branże)
+weszły do aplikacji od razu.
+
+### Zdrowie — zasady szczególne
+
+- Informacje podmiotów leczniczych nie mogą mieć cech reklamy (art. 14 ustawy o działalności
+  leczniczej): tylko termin, cena i adres; bez promocji i płatnych wyróżnień; kolejność ofert
+  według terminu.
+- Zapytanie o wizytę medyczną to informacja o zdrowiu (art. 9 RODO): wysłanie wymaga
+  zaznaczenia wyraźnej zgody, a klient podaje rodzaj wizyty, nie objawy
+  (`zapytania.zgoda_dane_zdrowotne_at`).
+- **Otwarte:** model rozliczeń z gabinetami. Rekomendacja: abonament zamiast prowizji od
+  pacjenta (prowizja za „przyprowadzenie” pacjenta może być sprzeczna z etyką zawodową
+  lekarzy). Do czasu decyzji kod liczy prowizję jak w innych branżach.
 
 ## 4. Zadatek — NIE w fazie 1
 
@@ -62,7 +80,7 @@ Na późniejsze fazy, gdy zadatek wróci (analiza z 30.09.2026):
 - W kodzie: `POBIERAMY_ZADATEK = false` i parametr `PARAMETRY_ZADATKU.przyOdwolaniuKlientki`
   w `src/domain/rozliczenie.ts`, domyślnie `"zwrot"`. Zmiana decyzji = zmiana jednej wartości.
 
-## 5. Zabiegi iniekcyjne (od F2)
+## 5. Zabiegi iniekcyjne
 
 - Wchodzą, jeśli salon ma je w ofercie.
 - Toksyna botulinowa to lek na receptę: w aplikacji nazwa ogólna („Zabieg z toksyną

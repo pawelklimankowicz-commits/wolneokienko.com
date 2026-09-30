@@ -40,12 +40,14 @@ create table public.salony (
 create index salony_lokalizacja_gist on public.salony using gist (lokalizacja);
 create index salony_przyjmuje on public.salony (przyjmuje_zapytania) where przyjmuje_zapytania;
 
--- ── Katalog usług (źródło: src/domain/katalog-uslug.ts) ─────────────
+-- ── Katalog usług wszystkich branż (źródło: src/domain/katalog-uslug.ts) ──
 create table public.uslugi (
   kod text primary key,
   nazwa text not null,
   kategoria text not null,
-  faza smallint not null check (faza between 1 and 6),
+  branza text not null check (branza in ('uroda', 'zdrowie', 'auto', 'zwierzeta', 'sport', 'nauka', 'dom')),
+  -- zdrowie: zgoda na dane o zdrowiu, bez promocji, neutralna kolejność ofert
+  medyczna boolean not null default false,
   typowy_czas_min integer not null check (typowy_czas_min > 0),
   bez_promocji boolean not null default false,
   wymaga_lekarza boolean not null default false,
@@ -88,6 +90,8 @@ create table public.zapytania (
   lokalizacja extensions.geography (point, 4326) not null,
   limit_ceny_gr integer check (limit_ceny_gr > 0),
   tryb text not null default 'zbieram' check (tryb in ('pierwsza', 'zbieram')),
+  -- wyraźna zgoda na przekazanie rodzaju wizyty medycznej (art. 9 ust. 2 lit. a RODO)
+  zgoda_dane_zdrowotne_at timestamptz,
   promien_km numeric(5, 1),
   status text not null default 'otwarte'
     check (status in ('otwarte', 'zarezerwowane', 'bez_ofert', 'anulowane', 'wygasle')),

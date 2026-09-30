@@ -11,11 +11,12 @@ import { Salon } from "./ekrany/Salon";
 import { Start } from "./ekrany/Start";
 import { Wizyty } from "./ekrany/Wizyty";
 import { Zapytanie, type WyslaneZapytanie } from "./ekrany/Zapytanie";
+import type { Branza } from "./domain/katalog-uslug";
 import { Ikona, type NazwaIkony } from "./ui/Ikona";
 
 type Zakladka = "start" | "okienka" | "wizyty" | "profil";
 type Nakladka =
-  | { typ: "zapytanie"; tekst: string }
+  | { typ: "zapytanie"; tekst: string; branza?: Branza }
   | { typ: "oferty"; zapytanie: WyslaneZapytanie }
   | { typ: "potwierdzenie"; rezerwacja: Rezerwacja }
   | { typ: "salon" }
@@ -41,7 +42,7 @@ export default function App() {
     return () => clearTimeout(t);
   }, [toast]);
 
-  const zapytaj = useCallback((tekst: string) => setNakladka({ typ: "zapytanie", tekst }), []);
+  const zapytaj = useCallback((tekst: string, branza?: Branza) => setNakladka({ typ: "zapytanie", tekst, branza }), []);
   const rezerwujOkienko = useCallback((o: Okienko) => {
     setNakladka({
       typ: "potwierdzenie",
@@ -74,7 +75,7 @@ export default function App() {
           <Start onZapytaj={zapytaj} onRezerwuj={rezerwujOkienko} onWszystkieOkienka={() => setZakladka("okienka")} />
         )}
         {zakladka === "okienka" && <Okienka onRezerwuj={rezerwujOkienko} onZapytaj={zapytaj} />}
-        {zakladka === "wizyty" && <Wizyty onZapytaj={zapytaj} onInfo={setToast} />}
+        {zakladka === "wizyty" && <Wizyty onZapytaj={(t) => zapytaj(t)} onInfo={setToast} />}
         {zakladka === "profil" && <Profil onSalon={() => setNakladka({ typ: "salon" })} onInfo={setToast} />}
       </main>
 
@@ -98,6 +99,7 @@ export default function App() {
       {nakladka?.typ === "zapytanie" && (
         <Zapytanie
           tekstPoczatkowy={nakladka.tekst}
+          branzaPoczatkowa={nakladka.branza}
           onZamknij={() => setNakladka(null)}
           onWyslij={(z) => setNakladka({ typ: "oferty", zapytanie: z })}
         />

@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { KANDYDACI_PODGLAD } from "@/dane/przyklad";
 import { zaplanujFale } from "@/domain/fale";
-import { KATALOG_USLUG, type Usluga } from "@/domain/katalog-uslug";
-import { km, odmiana } from "@/lib/format";
+import { KATALOG_USLUG, branzaUslugi, czyMedyczna, opisBranzy, uslugiBranzy, type Branza, type Usluga } from "@/domain/katalog-uslug";
+import { km } from "@/lib/format";
 import { parsujZapytanie, type Kiedy } from "@/lib/parsuj-zapytanie";
 import { Ikona } from "@/ui/Ikona";
 import { NaglowekEkranu } from "@/ui/wspolne";
@@ -15,7 +15,7 @@ export interface WyslaneZapytanie {
   odGodziny: number | null;
   limitZl: number | null;
   tryb: TrybWyboru;
-  liczbaSalonow: number;
+  liczbaWykonawcow: number;
   promienKm: number;
 }
 
@@ -25,16 +25,17 @@ const KIEDY: { wartosc: Kiedy; etykieta: string }[] = [
   { wartosc: "jutro", etykieta: "Jutro" },
   { wartosc: "weekend", etykieta: "Weekend" },
 ];
-const GODZINY: (number | null)[] = [null, 10, 12, 16, 18];
+const GODZINY: (number | null)[] = [null, 8, 12, 16, 18];
 const LIMITY: (number | null)[] = [null, 100, 150, 200, 300];
-const PODPOWIEDZI = ["manicure_hybrydowy", "przedluzanie_paznokci_zel", "pedicure_hybrydowy", "rzesy_1_1", "strzyzenie_meskie"];
 
 export function Zapytanie({
   tekstPoczatkowy,
+  branzaPoczatkowa,
   onWyslij,
   onZamknij,
 }: {
   tekstPoczatkowy: string;
+  branzaPoczatkowa?: Branza;
   onWyslij: (z: WyslaneZapytanie) => void;
   onZamknij: () => void;
 }) {
@@ -45,6 +46,7 @@ export function Zapytanie({
   const [odGodziny, setOdGodziny] = useState<number | null>(poczatek.odGodziny);
   const [limitZl, setLimitZl] = useState<number | null>(poczatek.limitZl);
   const [tryb, setTryb] = useState<TrybWyboru>("zbieram");
+  const [zgodaZdrowie, setZgodaZdrowie] = useState(false);
 
   const rozbior = useMemo(() => parsujZapytanie(tekst), [tekst]);
 
@@ -57,14 +59,19 @@ export function Zapytanie({
     if (r.limitZl !== null) setLimitZl(r.limitZl);
   };
 
+  const usluga = KATALOG_USLUG.find((u) => u.kod === wybranaUsluga) ?? null;
+  const branza: Branza = usluga ? branzaUslugi(usluga) : (branzaPoczatkowa ?? "uroda");
+  const opis = opisBranzy(branza);
+  const medyczna = usluga ? czyMedyczna(usluga) : opis.medyczna;
+
   const propozycje = useMemo(() => {
-    const kody = [...rozbior.uslugi.map((u) => u.kod), ...PODPOWIEDZI];
-    return [...new Set(kody)].slice(0, 6).map((k) => KATALOG_USLUG.find((u) => u.kod === k)!);
-  }, [rozbior]);
+    const kody = [...rozbior.uslugi.map((u) => u.kod), ...uslugiBranzy(branza).map((u) => u.kod)];
+    return [...new Set(kody)].slice(0, 7).map((k) => KATALOG_USLUG.find((u) => u.kod === k)!);
+  }, [rozbior, branza]);
 
   const plan = useMemo(() => zaplanujFale(KANDYDACI_PODGLAD), []);
-  const liczbaSalonow = plan.fale.reduce((n, f) => n + f.salonIds.length, 0);
-  const usluga = KATALOG_USLUG.find((u) => u.kod === wybranaUsluga) ?? null;
+  const liczbaWykonawcow = plan.fale.reduce((n, f) => n + f.salonIds.length, 0);
+  const moznaWyslac = usluga !== null && (!medyczna || zgodaZdrowie);
 
   return (
     <div className="nakladka">
@@ -76,14 +83,14 @@ export function Zapytanie({
             id="tekst-zapytania"
             rows={2}
             autoFocus
-            placeholder="np. hybryda dziś po 16, do 150 zł"
+            placeholder={`np. ${opis.przyklad}`}
             value={tekst}
             onChange={(e) => zmienTekst(e.target.value)}
           />
         </label>
 
         <fieldset className="grupa">
-          <legend>Usługa</legend>
+          <legend>Usługa · {opis.nazwa}</legend>
           <div className="chipy">
             {propozycje.map((u) => (
               <button
@@ -141,6 +148,22 @@ export function Zapytanie({
             </button>
           </div>
         </fieldset>
+
+        {medyczna && (
+          <div className="zgoda-medyczna">
+            <p>
+              <Ikona nazwa="tarcza" rozmiar={18} />
+              Nie opisuj objawów. Wystarczy rodzaj wizyty.
+            </p>
+            <label>
+              <input id="zgoda-zdrowie" type="checkbox" checked={zgodaZdrowie} onChange={(e) => setZgodaZdrowie(e.target.checked)} />
+              <span>
+                Zgadzam się, żeby Wolne Okienko przekazało gabinetom w okolicy rodzaj wizyty, której szukam, w celu znalezienia
+                terminu. To informacja o zdrowiu (art. 9 ust. 2 lit. a RODO); zgodę mogę wycofać w profilu.
+              </span>
+            </label>
+          </div>
+        )}
       </div>
 
       <footer className="nakladka-stopka">
@@ -149,7 +172,7 @@ export function Zapytanie({
           <span>
             Zapytanie trafi do{" "}
             <strong>
-              {liczbaSalonow} {odmiana(liczbaSalonow, "salonu", "salonów", "salonów")}
+              {liczbaWykonawcow} {liczbaWykonawcow === 1 ? opis.wykonawcaDop[0] : opis.wykonawcaDop[1]}
             </strong>{" "}
             w promieniu {km(plan.promienKm)}
           </span>
@@ -157,12 +180,10 @@ export function Zapytanie({
         <button
           type="button"
           className="btn btn-duzy"
-          disabled={!usluga}
-          onClick={() =>
-            usluga && onWyslij({ usluga, kiedy, odGodziny, limitZl, tryb, liczbaSalonow, promienKm: plan.promienKm })
-          }
+          disabled={!moznaWyslac}
+          onClick={() => usluga && onWyslij({ usluga, kiedy, odGodziny, limitZl, tryb, liczbaWykonawcow, promienKm: plan.promienKm })}
         >
-          {usluga ? "Wyślij do salonów" : "Wybierz usługę"}
+          {!usluga ? "Wybierz usługę" : medyczna && !zgodaZdrowie ? "Zaznacz zgodę, żeby wysłać" : "Wyślij zapytanie"}
         </button>
       </footer>
     </div>

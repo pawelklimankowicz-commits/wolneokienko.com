@@ -491,6 +491,26 @@ p { margin: 0; }
   width: max-content; max-width: calc(100% - 40px); box-shadow: 0 16px 30px -16px var(--shadow); animation: wjazd 0.25s ease-out;
 }
 
+/* ── Branże i medycyna ─────────────────────────────────────────────── */
+.branze { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin-inline: -20px; padding-inline: 20px; }
+.branze::-webkit-scrollbar { display: none; }
+.branza {
+  flex: none; display: inline-flex; align-items: center; gap: 7px; border: 1.5px solid var(--line);
+  background: var(--surface); border-radius: 14px; padding: 9px 14px; font-weight: 700; font-size: 14.5px; color: var(--muted);
+}
+.branza svg { color: var(--muted); }
+.branza.aktywna { border-color: var(--lacquer); color: var(--ink); background: var(--lacquer-soft); }
+.branza.aktywna svg { color: var(--lacquer); }
+.info-medyczna, .zgoda-medyczna p {
+  display: flex; gap: 10px; align-items: flex-start; font-size: 14px; color: var(--ink);
+}
+.info-medyczna { background: var(--sunk); border-radius: 14px; padding: 12px 14px; }
+.info-medyczna svg, .zgoda-medyczna svg { color: var(--ok); flex: none; margin-top: 1px; }
+.zgoda-medyczna { background: var(--surface); border: 1.5px solid var(--line); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.zgoda-medyczna p { font-weight: 700; }
+.zgoda-medyczna label { display: grid; grid-template-columns: 22px 1fr; gap: 10px; font-size: 13.5px; color: var(--muted); cursor: pointer; }
+.zgoda-medyczna input { width: 20px; height: 20px; margin: 1px 0 0; accent-color: var(--lacquer); }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
