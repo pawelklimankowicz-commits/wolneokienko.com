@@ -1,18 +1,18 @@
 // =====================================================================
-// Rozliczenie zadatku po wizycie.
+// Rozliczenie rezerwacji po terminie wizyty.
 //
-// Klientka płaci zadatek przy wyborze oferty (BLIK, przez operatora
-// płatności z podziałem płatności). Po terminie wizyty rezerwacja ma jeden
-// z czterech wyników; ten moduł mówi, kto ile dostaje.
+// FAZA 1 — BEZ ZADATKU (decyzja właściciela z 30.09.2026): klientka płaci
+// całą kwotę w salonie, a prowizja 20% + VAT trafia w całości na miesięczną
+// fakturę salonu (KSeF). `zadatekGr` = 0 i żadne pieniądze klientki nie
+// przechodzą przez aplikację.
 //
-// ⚠️ ODWOŁANIE PRZEZ KLIENTKĘ — decyzja w toku (docs/DECYZJE.md, pkt 4).
-// Właściciel chce, żeby zadatek przepadał także przy odwołaniu. Analiza
-// prawna wskazuje, że przy umowie zawartej przez aplikację (na odległość)
-// konsumentka może odstąpić w 14 dni (art. 27 ustawy o prawach konsumenta),
-// a postanowienie odbierające jej zwrot jest nieważne (art. 7 tej ustawy).
-// Dlatego polityka jest PARAMETREM `przyOdwolaniuKlientki`, a domyślna
-// wartość w PARAMETRY_ZADATKU to zwrot. Nieobecność bez odwołania to
-// niewykonanie umowy — tu zadatek przepada (art. 394 § 1 Kodeksu cywilnego).
+// Zadatek wróci w późniejszych fazach. Moduł już go obsługuje:
+//  • nieobecność bez odwołania — zadatek przepada, 20% + VAT dla nas, reszta
+//    dla salonu (art. 394 § 1 Kodeksu cywilnego);
+//  • odwołanie przez klientkę — PARAMETR `przyOdwolaniuKlientki`, domyślnie
+//    zwrot: umowa zawarta przez aplikację to umowa na odległość, konsumentka
+//    ma 14 dni na odstąpienie (art. 27 ustawy o prawach konsumenta), a zapis
+//    gorszy niż ustawa jest nieważny (art. 7). Szczegóły: docs/DECYZJE.md.
 // =====================================================================
 
 import { PROWIZJA_ZERO, prowizjaOd, type Prowizja } from "./prowizja";
@@ -31,14 +31,17 @@ export const PARAMETRY_ZADATKU: ParametryZadatku = {
   przyOdwolaniuKlientki: "zwrot",
 };
 
+/** Czy aplikacja pobiera zadatek. Faza 1: nie. */
+export const POBIERAMY_ZADATEK = false;
+
 export interface DaneRozliczenia {
   wynik: WynikRezerwacji;
-  /** Zadatek wpłacony przez klientkę. */
-  zadatekGr: number;
   /** Cena wizyty z oferty salonu (podstawa prowizji przy wizycie zrealizowanej). */
   cenaWizytyGr: number;
   /** Czy wizyta jest zwolniona z prowizji w ramach promocji startowej. */
   zwolnionaPromocja: boolean;
+  /** Zadatek wpłacony przez klientkę. W fazie 1 zawsze 0. */
+  zadatekGr?: number;
 }
 
 export interface Rozliczenie {
@@ -48,7 +51,7 @@ export interface Rozliczenie {
   wyplataDlaSalonuGr: number;
   /** Ile z zadatku wraca do klientki. */
   zwrotDlaKlientkiGr: number;
-  /** Ile klientka dopłaca w salonie (tylko przy wizycie zrealizowanej). */
+  /** Ile klientka płaci w salonie (tylko przy wizycie zrealizowanej). */
   doplataWSalonieGr: number;
   /** Część prowizji, której nie pokrył zadatek — trafia na fakturę miesięczną salonu. */
   doFakturyGr: number;
@@ -71,30 +74,31 @@ function potracProwizje(zadatekGr: number, prowizja: Prowizja) {
   };
 }
 
-export function rozliczZadatek(
+export function rozliczRezerwacje(
   dane: DaneRozliczenia,
   parametry: ParametryZadatku = PARAMETRY_ZADATKU,
 ): Rozliczenie {
-  sprawdzGrosze("Zadatek", dane.zadatekGr);
+  const zadatekGr = dane.zadatekGr ?? 0;
+  sprawdzGrosze("Zadatek", zadatekGr);
   sprawdzGrosze("Cena wizyty", dane.cenaWizytyGr);
-  if (dane.zadatekGr > dane.cenaWizytyGr) {
+  if (zadatekGr > dane.cenaWizytyGr) {
     throw new Error("Zadatek nie może być wyższy niż cena wizyty.");
   }
 
   const zwrotCalosci: Rozliczenie = {
     prowizja: PROWIZJA_ZERO,
     wyplataDlaSalonuGr: 0,
-    zwrotDlaKlientkiGr: dane.zadatekGr,
+    zwrotDlaKlientkiGr: zadatekGr,
     doplataWSalonieGr: 0,
     doFakturyGr: 0,
     obnizaWskaznik: null,
   };
 
   const przepadek = (): Rozliczenie => {
-    const prowizja = dane.zwolnionaPromocja ? PROWIZJA_ZERO : prowizjaOd(dane.zadatekGr);
+    const prowizja = dane.zwolnionaPromocja ? PROWIZJA_ZERO : prowizjaOd(zadatekGr);
     return {
       prowizja,
-      ...potracProwizje(dane.zadatekGr, prowizja),
+      ...potracProwizje(zadatekGr, prowizja),
       zwrotDlaKlientkiGr: 0,
       doplataWSalonieGr: 0,
       obnizaWskaznik: "klientka",
@@ -106,9 +110,9 @@ export function rozliczZadatek(
       const prowizja = dane.zwolnionaPromocja ? PROWIZJA_ZERO : prowizjaOd(dane.cenaWizytyGr);
       return {
         prowizja,
-        ...potracProwizje(dane.zadatekGr, prowizja),
+        ...potracProwizje(zadatekGr, prowizja),
         zwrotDlaKlientkiGr: 0,
-        doplataWSalonieGr: dane.cenaWizytyGr - dane.zadatekGr,
+        doplataWSalonieGr: dane.cenaWizytyGr - zadatekGr,
         obnizaWskaznik: null,
       };
     }

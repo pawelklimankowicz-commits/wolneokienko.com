@@ -66,6 +66,17 @@ describe("migracje", () => {
       ),
     ).rejects.toThrow();
 
+    // faza 1: rezerwacja bez zadatku, zgłoszenia salonu i klientki
+    const rez = await db.query<{ zadatek_gr: number }>(
+      `insert into public.rezerwacje (oferta_id, klientka_id, salon_id, termin, cena_gr, zgloszenie_salonu, potwierdzenie_klientki)
+       values ($1, $2, $3, now(), 13000, 'nieobecnosc', 'bylam') returning zadatek_gr`,
+      [oferta.rows[0].id, uid, salon.rows[0].id],
+    );
+    expect(rez.rows[0].zadatek_gr).toBe(0);
+    await expect(
+      db.query("update public.rezerwacje set potwierdzenie_klientki = 'moze'"),
+    ).rejects.toThrow();
+
     await db.close();
   }, 30_000);
 });

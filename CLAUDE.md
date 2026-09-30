@@ -10,7 +10,7 @@ albo katalogu usług.
 ## Stos
 
 React + Vite + TypeScript, Supabase (Postgres z PostGIS, Realtime, funkcje brzegowe),
-docelowo Capacitor dla iOS i Androida. Domena: wolneokienko.app.
+docelowo Capacitor dla iOS i Androida. Domena: wolneokienko.com.
 
 ## Logika domenowa
 
@@ -18,7 +18,8 @@ docelowo Capacitor dla iOS i Androida. Domena: wolneokienko.app.
 i dopasowania są tutaj i mają testy:
 
 - `prowizja.ts` — 20% + VAT od każdej wizyty, promocja startowa;
-- `zadatek.ts` — rozliczenie zadatku po wizycie (4 wyniki);
+- `wynik-wizyty.ts` — czy wizyta się odbyła, na podstawie zgłoszeń salonu i klientki;
+- `rozliczenie.ts` — rozliczenie rezerwacji (faza 1 bez zadatku, zadatek gotowy na później);
 - `fale.ts` — rozsyłanie zapytań falami, rosnący promień;
 - `katalog-uslug.ts` — usługi, fazy, zasady dla zabiegów iniekcyjnych.
 

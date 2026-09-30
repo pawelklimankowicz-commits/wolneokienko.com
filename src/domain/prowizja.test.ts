@@ -1,4 +1,4 @@
-import { czyZwolnionaPromocja, prowizjaOd, PROMOCJA_STARTOWA } from "./prowizja";
+import { czyZwolnionaPromocja, prowizjaOd } from "./prowizja";
 
 const dzien = (n: number) => new Date(Date.UTC(2026, 10, 1) + n * 24 * 60 * 60 * 1000);
 
@@ -20,21 +20,18 @@ describe("prowizjaOd", () => {
 });
 
 describe("czyZwolnionaPromocja", () => {
-  const salon = { aktywowanyAt: dzien(0), wizytyPrzed: 0, wizytyPrzedPoProbie: 0 };
+  const aktywowanyAt = dzien(0);
 
-  it("w miesiącu próbnym każda wizyta jest bez prowizji", () => {
-    expect(czyZwolnionaPromocja({ ...salon, wizytyPrzed: 40 }, dzien(29))).toBe(true);
+  it("w miesiącu próbnym 5 pierwszych wizyt jest bez prowizji", () => {
+    expect(czyZwolnionaPromocja({ aktywowanyAt, wizytyPrzed: 0 }, dzien(2))).toBe(true);
+    expect(czyZwolnionaPromocja({ aktywowanyAt, wizytyPrzed: 4 }, dzien(20))).toBe(true);
   });
 
-  it("po miesiącu próbnym (liczenie od aktywacji) darmowe są tylko wizyty do piątej", () => {
-    expect(czyZwolnionaPromocja({ ...salon, wizytyPrzed: 3 }, dzien(31))).toBe(true);
-    expect(czyZwolnionaPromocja({ ...salon, wizytyPrzed: 5 }, dzien(31))).toBe(false);
+  it("szósta wizyta w miesiącu próbnym jest już z prowizją", () => {
+    expect(czyZwolnionaPromocja({ aktywowanyAt, wizytyPrzed: 5 }, dzien(20))).toBe(false);
   });
 
-  it("wariant „od końca próby”: 5 darmowych wizyt dodatkowo po miesiącu próbnym", () => {
-    const kolejno = { ...PROMOCJA_STARTOWA, liczDarmoweWizytyOd: "konca_proby" as const };
-    const poProbie = { ...salon, wizytyPrzed: 40, wizytyPrzedPoProbie: 4 };
-    expect(czyZwolnionaPromocja(poProbie, dzien(35), kolejno)).toBe(true);
-    expect(czyZwolnionaPromocja({ ...poProbie, wizytyPrzedPoProbie: 5 }, dzien(35), kolejno)).toBe(false);
+  it("po miesiącu próbnym niewykorzystane darmowe wizyty przepadają", () => {
+    expect(czyZwolnionaPromocja({ aktywowanyAt, wizytyPrzed: 1 }, dzien(31))).toBe(false);
   });
 });

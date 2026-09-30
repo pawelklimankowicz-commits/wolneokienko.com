@@ -1,4 +1,4 @@
-// Strona startowa wolneokienko.app na czas budowy fazy 1: mówi klientkom,
+// Strona startowa wolneokienko.com na czas budowy fazy 1: mówi klientkom,
 // czym jest aplikacja, a salonom — na jakich warunkach dołączają.
 import { PROMOCJA_STARTOWA, STAWKA_PROWIZJI } from "./domain/prowizja";
 
@@ -27,8 +27,9 @@ export default function App() {
           <li>Płacisz tylko za wizytę, która przyszła przez aplikację: {procent}% + VAT.</li>
           <li>Bez abonamentu i bez umowy terminowej.</li>
           <li>
-            Pierwszy miesiąc próbny i {PROMOCJA_STARTOWA.darmoweWizyty} pierwszych klientek bez prowizji.
+            Miesiąc próbny: {PROMOCJA_STARTOWA.darmoweWizyty} pierwszych klientek bez prowizji.
           </li>
+          <li>Klientka płaci u Ciebie w salonie, bez przedpłat w aplikacji.</li>
           <li>Zostajesz przy swoim kalendarzu. My wypełniamy wolne okienka.</li>
         </ul>
       </section>

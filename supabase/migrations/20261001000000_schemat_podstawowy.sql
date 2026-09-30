@@ -2,9 +2,12 @@
 -- Wolne Okienko — schemat podstawowy (faza 1).
 --
 -- Przepływ: klientka składa ZAPYTANIE → system rozsyła je falami do salonów
--- (ROZESLANIA) → salony składają OFERTY → klientka wybiera jedną, płaci
--- zadatek (REZERWACJA) → po terminie wizyty powstaje ROZLICZENIE
--- (prowizja 20% + VAT, wypłata dla salonu, ewentualny zwrot).
+-- (ROZESLANIA) → salony składają OFERTY → klientka wybiera jedną (REZERWACJA)
+-- → po terminie salon i klientka zgłaszają, czy wizyta się odbyła
+-- (src/domain/wynik-wizyty.ts) → powstaje ROZLICZENIE (prowizja 20% + VAT).
+--
+-- Faza 1 bez zadatku: klientka płaci w salonie, prowizja idzie na miesięczną
+-- fakturę salonu. Kolumny zadatku zostają na późniejsze fazy (domyślnie 0).
 --
 -- Kwoty w groszach (integer). Czas w timestamptz. Lokalizacja w PostGIS
 -- (geography, WGS84) — zapytania „salony w promieniu X km”.
@@ -28,6 +31,8 @@ create table public.salony (
   wskaznik_odpowiedzi numeric(4, 3) not null default 0.5 check (wskaznik_odpowiedzi between 0 and 1),
   aktywowany_at timestamptz,
   zablokowany_at timestamptz,
+  -- nieopłacona faktura prowizyjna po terminie: salon nie dostaje zapytań
+  wstrzymany_za_zaleglosc_at timestamptz,
   created_at timestamptz not null default now()
 );
 
@@ -63,7 +68,11 @@ create table public.klientki (
   id uuid primary key references auth.users (id) on delete cascade,
   imie text,
   telefon text,
+  telefon_zweryfikowany_at timestamptz,
   wskaznik_stawiennictwa numeric(4, 3) not null default 1 check (wskaznik_stawiennictwa between 0 and 1),
+  nieobecnosci integer not null default 0 check (nieobecnosci >= 0),
+  -- bez zadatku nieobecności nic nie kosztują, więc po kilku blokujemy konto
+  zablokowana_at timestamptz,
   created_at timestamptz not null default now()
 );
 
@@ -122,8 +131,15 @@ create table public.rezerwacje (
   salon_id uuid not null references public.salony (id),
   termin timestamptz not null,
   cena_gr integer not null check (cena_gr > 0),
-  zadatek_gr integer not null check (zadatek_gr >= 0),
+  zadatek_gr integer not null default 0 check (zadatek_gr >= 0),
   platnosc_ref text,
+  -- zgłoszenia po terminie wizyty (src/domain/wynik-wizyty.ts)
+  zgloszenie_salonu text check (zgloszenie_salonu in ('zrealizowana', 'nieobecnosc', 'odwolana_przez_klientke', 'odwolana_przez_salon')),
+  zgloszenie_salonu_at timestamptz,
+  potwierdzenie_klientki text check (potwierdzenie_klientki in ('bylam', 'nie_bylam', 'salon_odwolal')),
+  potwierdzenie_klientki_at timestamptz,
+  spor_at timestamptz,
+  -- wynik ostateczny: podstawa rozliczenia
   wynik text check (wynik in ('zrealizowana', 'nieobecnosc', 'odwolana_przez_klientke', 'odwolana_przez_salon')),
   wynik_at timestamptz,
   created_at timestamptz not null default now(),
@@ -132,7 +148,7 @@ create table public.rezerwacje (
 
 create index rezerwacje_salon_termin on public.rezerwacje (salon_id, termin);
 
--- ── Rozliczenia (src/domain/zadatek.ts) ─────────────────────────────
+-- ── Rozliczenia (src/domain/rozliczenie.ts) ──────────────────────────
 create table public.rozliczenia (
   rezerwacja_id uuid primary key references public.rezerwacje (id),
   prowizja_netto_gr integer not null check (prowizja_netto_gr >= 0),
@@ -141,7 +157,8 @@ create table public.rozliczenia (
   zwrot_dla_klientki_gr integer not null check (zwrot_dla_klientki_gr >= 0),
   do_faktury_gr integer not null check (do_faktury_gr >= 0),
   zwolniona_promocja boolean not null,
-  polityka_odwolania text not null check (polityka_odwolania in ('zwrot', 'przepada')),
+  -- null, gdy rezerwacja była bez zadatku (faza 1)
+  polityka_odwolania text check (polityka_odwolania in ('zwrot', 'przepada')),
   created_at timestamptz not null default now()
 );
 
