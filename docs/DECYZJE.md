@@ -149,3 +149,18 @@ Właściciel zatwierdził wszystkie propozycje z analizy. Katalog: 8 branż, 47 
 - Dom: mycie okien, pranie tapicerki, ślusarz, elektryk, serwis AGD.
 - Uroda: opalanie natryskowe, Kobido, drenaż, balayage, przedłużanie włosów, strzyżenie dziecięce, manicure męski.
 
+
+## 11. Zapytania i oferty na żywo (30.09.2026)
+
+- Zapytanie idzie falami: 5 najbliższych usługodawców od razu, 10 kolejnych po 3 min, reszta po 6 min; promień rośnie od 3 do 30 km, aż znajdzie się co najmniej 5.
+- Oferty zbieramy 10 minut; oferta wiąże usługodawcę jeszcze 15 minut po końcu zbierania. Jedna oferta salonu na zapytanie, najwcześniej 10 minut od teraz, nigdy powyżej limitu klientki.
+- Tryb „biorę pierwszą pasującą”: pierwsza oferta w warunkach klientki od razu staje się rezerwacją.
+- Klientka: najwyżej 3 otwarte zapytania i 20 na dobę. Opis przy usługach medycznych nie jest zapisywany ani wysyłany.
+- Telefon salonu klientka widzi dopiero po rezerwacji; salon widzi telefon klientki tylko przy swoich wizytach.
+- Do zrobienia: powiadomienie usługodawcy o nowym zapytaniu, gdy nie ma otwartej aplikacji (push w aplikacji mobilnej albo SMS — SMS kosztuje, decyzja właściciela).
+
+## 12. Import danych z innych systemów (np. Booksy) (30.09.2026)
+
+- Bez logowania się loginem salonu do cudzego systemu i bez automatycznego pobierania z niego danych (regulamin tych systemów, ryzyko blokady konta salonu).
+- Legalnie: import cennika z tekstu lub zdjęcia (salon zatwierdza dopasowanie do katalogu), wgrywanie własnych zdjęć, eksport danych na wniosek salonu (Data Act, rozporządzenie UE 2023/2854) i import pliku.
+- Listy klientek nie importujemy (RODO).

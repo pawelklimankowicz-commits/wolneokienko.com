@@ -1,116 +1,177 @@
-import { useState } from "react";
-import { WIZYTY, salon, type StatusWizyty, type Wizyta } from "@/dane/przyklad";
-import type { PotwierdzenieKlientki } from "@/domain/wynik-wizyty";
-import { zlote } from "@/lib/format";
-import { AwatarSalonu, EtykietaPodgladu } from "@/ui/wspolne";
+// Wizyty klientki z bazy: nadchodzące, do potwierdzenia po terminie
+// (byłam / nie byłam / salon odwołał — podstawa rozliczenia prowizji), historia.
+import { useCallback, useEffect, useState } from "react";
+import { KATALOG_USLUG } from "@/domain/katalog-uslug";
+import type { StatusWizyty, WizytaWidok } from "@/domain/widoki";
+import type { KlientApi, Konto, OdpowiedzPoWizycie } from "@/lib/api";
+import { cena } from "@/lib/format";
+import { telefonCzytelny } from "@/lib/telefon";
+import { AwatarKolory } from "@/ui/wspolne";
 
-const ETYKIETA: Record<StatusWizyty | "nieobecnosc", string> = {
+const ETYKIETA: Record<StatusWizyty, string> = {
   potwierdzona: "Potwierdzona",
   do_potwierdzenia: "Czekamy na Twoją odpowiedź",
   zakonczona: "Zakończona",
+  odwolana_przez_klientke: "Odwołana przez Ciebie",
   odwolana_przez_salon: "Odwołana przez salon",
   nieobecnosc: "Nieobecność",
 };
 
+const miesiac = new Intl.DateTimeFormat("pl-PL", { month: "short" });
+const godzina = new Intl.DateTimeFormat("pl-PL", { hour: "numeric", minute: "2-digit" });
+const nazwaUslugi = (kod: string) => KATALOG_USLUG.find((u) => u.kod === kod)?.nazwa ?? kod;
+
 function KartaWizyty({
   w,
-  status,
+  zajete,
   onPotwierdz,
+  onOdwolaj,
   onZapytaj,
-  onInfo,
 }: {
-  w: Wizyta;
-  status: StatusWizyty | "nieobecnosc";
-  onPotwierdz: (p: PotwierdzenieKlientki) => void;
+  w: WizytaWidok;
+  zajete: boolean;
+  onPotwierdz: (p: OdpowiedzPoWizycie) => void;
+  onOdwolaj: () => void;
   onZapytaj: () => void;
-  onInfo: (tekst: string) => void;
 }) {
-  const s = salon(w.salonId);
+  const [pytamOOdwolanie, setPytamOOdwolanie] = useState(false);
+  const termin = new Date(w.termin);
+  const trasa = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(w.adres)}`;
   return (
-    <article className={`karta-wizyty status-${status}`}>
+    <article className={`karta-wizyty status-${w.status}`}>
       <div className="karta-wizyty-lewa">
-        <span className="pigulka-statusu">{ETYKIETA[status]}</span>
-        <h3>{w.usluga}</h3>
+        <span className="pigulka-statusu">{ETYKIETA[w.status]}</span>
+        <h3>{nazwaUslugi(w.uslugaKod)}</h3>
         <p className="salon-rzad">
-          <AwatarSalonu salon={s} rozmiar={30} />
-          {s.nazwa}
+          <AwatarKolory nazwa={w.salonNazwa} kolory={w.kolory} rozmiar={30} />
+          {w.salonNazwa}
         </p>
-        <p className="wyciszony maly">{zlote(w.cenaGr)} · płatne w salonie</p>
+        <p className="wyciszony maly">
+          {cena(w.cenaGr)} · płatne na miejscu{w.status === "potwierdzona" ? ` · ${w.adres}` : ""}
+        </p>
 
-        {status === "do_potwierdzenia" && (
+        {w.status === "do_potwierdzenia" && (
           <div className="pytanie-po-wizycie">
             <p>Byłaś na tej wizycie?</p>
             <div className="przyciski-rzad">
-              <button type="button" className="btn btn-maly" onClick={() => onPotwierdz("bylam")}>
+              <button type="button" className="btn btn-maly" disabled={zajete} onClick={() => onPotwierdz("bylam")}>
                 Byłam
               </button>
-              <button type="button" className="btn btn-maly btn-obrys" onClick={() => onPotwierdz("nie_bylam")}>
+              <button type="button" className="btn btn-maly btn-obrys" disabled={zajete} onClick={() => onPotwierdz("nie_bylam")}>
                 Nie byłam
               </button>
-              <button type="button" className="btn btn-maly btn-obrys" onClick={() => onPotwierdz("salon_odwolal")}>
+              <button type="button" className="btn btn-maly btn-obrys" disabled={zajete} onClick={() => onPotwierdz("salon_odwolal")}>
                 Salon odwołał
               </button>
             </div>
           </div>
         )}
-        {status === "potwierdzona" && (
+        {w.status === "potwierdzona" && !pytamOOdwolanie && (
           <div className="przyciski-rzad">
-            <button type="button" className="btn btn-maly btn-obrys" onClick={() => onInfo("Trasa do salonu otworzy się w mapach telefonu.")}>
+            <a className="btn btn-maly btn-obrys" href={trasa} target="_blank" rel="noreferrer">
               Trasa
-            </button>
-            <button type="button" className="btn btn-maly btn-obrys" onClick={() => onInfo("Wizyta odwołana. Salon dostał powiadomienie i może oddać termin innej osobie.")}>
+            </a>
+            {w.telefon && (
+              <a className="btn btn-maly btn-obrys" href={`tel:${w.telefon}`} aria-label={`Zadzwoń: ${telefonCzytelny(w.telefon)}`}>
+                Zadzwoń
+              </a>
+            )}
+            <button type="button" className="btn btn-maly btn-obrys" onClick={() => setPytamOOdwolanie(true)}>
               Odwołaj
             </button>
           </div>
         )}
-        {(status === "zakonczona" || status === "odwolana_przez_salon" || status === "nieobecnosc") && (
+        {w.status === "potwierdzona" && pytamOOdwolanie && (
+          <div className="pytanie-po-wizycie">
+            <p>Odwołać wizytę? Salon dostanie wiadomość i odda termin komuś innemu.</p>
+            <div className="przyciski-rzad">
+              <button type="button" className="btn btn-maly" disabled={zajete} onClick={onOdwolaj}>
+                Tak, odwołuję
+              </button>
+              <button type="button" className="btn btn-maly btn-obrys" onClick={() => setPytamOOdwolanie(false)}>
+                Zostawiam
+              </button>
+            </div>
+          </div>
+        )}
+        {(w.status === "zakonczona" || w.status.startsWith("odwolana") || w.status === "nieobecnosc") && (
           <div className="przyciski-rzad">
             <button type="button" className="btn btn-maly" onClick={onZapytaj}>
               Zapytaj ponownie
             </button>
-            {status === "zakonczona" && (
-              <button type="button" className="btn btn-maly btn-obrys" onClick={() => onInfo("Dziękujemy za ocenę.")}>
-                Oceń
-              </button>
-            )}
           </div>
         )}
       </div>
       <div className="karta-wizyty-data">
-        <span>{w.miesiac}</span>
-        <strong>{w.dzien}</strong>
-        <span className="mono">{w.godzina}</span>
+        <span>{miesiac.format(termin).replace(".", "")}</span>
+        <strong>{termin.getDate()}</strong>
+        <span className="mono">{godzina.format(termin)}</span>
       </div>
     </article>
   );
 }
 
-export function Wizyty({ onZapytaj, onInfo }: { onZapytaj: (tekst: string) => void; onInfo: (tekst: string) => void }) {
-  const [statusy, setStatusy] = useState<Record<string, StatusWizyty | "nieobecnosc">>(
-    Object.fromEntries(WIZYTY.map((w) => [w.id, w.status])),
-  );
+export function Wizyty({
+  api,
+  konto,
+  onZapytaj,
+  onZaloguj,
+  onInfo,
+}: {
+  api: KlientApi;
+  /** undefined — jeszcze sprawdzamy sesję */
+  konto: Konto | null | undefined;
+  onZapytaj: (tekst: string) => void;
+  onZaloguj: () => void;
+  onInfo: (tekst: string) => void;
+}) {
+  const [wizyty, setWizyty] = useState<WizytaWidok[] | null>(null);
+  const [zajeta, setZajeta] = useState<string | null>(null);
+  const zalogowana = !!konto || api.podglad;
 
-  const potwierdz = (w: Wizyta, p: PotwierdzenieKlientki) => {
-    const nowy = p === "bylam" ? "zakonczona" : p === "salon_odwolal" ? "odwolana_przez_salon" : "nieobecnosc";
-    setStatusy((st) => ({ ...st, [w.id]: nowy }));
-    onInfo(p === "bylam" ? "Dziękujemy! Wizyta zapisana jako zakończona." : "Dziękujemy za informację.");
+  const wczytaj = useCallback(async () => setWizyty(await api.mojeWizyty()), [api]);
+  useEffect(() => {
+    if (zalogowana) wczytaj();
+  }, [zalogowana, wczytaj]);
+
+  const akcja = async (id: string, zadanie: Promise<{ ok: boolean; komunikat?: string }>, dziekujemy: string) => {
+    setZajeta(id);
+    const w = await zadanie;
+    setZajeta(null);
+    onInfo(w.ok ? dziekujemy : (w.komunikat ?? "Coś poszło nie tak."));
+    await wczytaj();
   };
 
-  const sekcje: { tytul: string; wizyty: Wizyta[] }[] = [
-    { tytul: "Nadchodzące", wizyty: WIZYTY.filter((w) => statusy[w.id] === "potwierdzona") },
-    { tytul: "Do potwierdzenia", wizyty: WIZYTY.filter((w) => statusy[w.id] === "do_potwierdzenia") },
-    {
-      tytul: "Zakończone i odwołane",
-      wizyty: WIZYTY.filter((w) => ["zakonczona", "odwolana_przez_salon", "nieobecnosc"].includes(statusy[w.id])),
-    },
+  const lista = wizyty ?? [];
+  const sekcje: { tytul: string; wizyty: WizytaWidok[] }[] = [
+    { tytul: "Do potwierdzenia", wizyty: lista.filter((w) => w.status === "do_potwierdzenia") },
+    { tytul: "Nadchodzące", wizyty: lista.filter((w) => w.status === "potwierdzona").sort((a, b) => a.termin.localeCompare(b.termin)) },
+    { tytul: "Zakończone i odwołane", wizyty: lista.filter((w) => w.status !== "potwierdzona" && w.status !== "do_potwierdzenia") },
   ];
 
   return (
     <div className="ekran ekran-jasny">
       <header className="tytul-ekranu">
         <h1>Wizyty</h1>
-        <EtykietaPodgladu />
       </header>
+
+      {konto === null && !api.podglad && (
+        <div className="pusto">
+          <p>Tu zobaczysz swoje rezerwacje. Zaloguj się numerem telefonu, którym rezerwujesz.</p>
+          <button type="button" className="btn" onClick={onZaloguj}>
+            Zaloguj się
+          </button>
+        </div>
+      )}
+      {zalogowana && wizyty !== null && lista.length === 0 && (
+        <div className="pusto">
+          <p>Nie masz jeszcze wizyt. Napisz, czego potrzebujesz i na kiedy — salony z okolicy odpowiedzą w kilka minut.</p>
+          <button type="button" className="btn" onClick={() => onZapytaj("")}>
+            Nowe zapytanie
+          </button>
+        </div>
+      )}
+
       {sekcje
         .filter((s) => s.wizyty.length > 0)
         .map((s) => (
@@ -120,10 +181,12 @@ export function Wizyty({ onZapytaj, onInfo }: { onZapytaj: (tekst: string) => vo
               <KartaWizyty
                 key={w.id}
                 w={w}
-                status={statusy[w.id]}
-                onPotwierdz={(p) => potwierdz(w, p)}
-                onZapytaj={() => onZapytaj(`${w.usluga.toLowerCase()} dziś`)}
-                onInfo={onInfo}
+                zajete={zajeta === w.id}
+                onPotwierdz={(p) =>
+                  akcja(w.id, api.potwierdzWizyte(w.id, p), p === "bylam" ? "Dziękujemy! Wizyta zapisana jako zakończona." : "Dziękujemy za informację.")
+                }
+                onOdwolaj={() => akcja(w.id, api.odwolajWizyte(w.id), "Wizyta odwołana. Salon może oddać termin innej osobie.")}
+                onZapytaj={() => onZapytaj(`${nazwaUslugi(w.uslugaKod).toLowerCase()} dziś`)}
               />
             ))}
           </section>

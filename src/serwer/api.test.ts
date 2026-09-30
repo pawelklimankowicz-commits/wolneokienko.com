@@ -141,4 +141,49 @@ describe("API logowania", () => {
     const inne = await post("/api/logowanie/sprawdz", { telefon: "600222444", kod: wyslane.at(-1), akceptujeRegulamin: true });
     expect(await (await get("/api/salon", { Cookie: `${CIASTECZKO_SESJI}=${tokenZ(inne)}` })).json()).toEqual({ salon: null });
   });
+
+  it("zapytanie → skrzynka salonu → oferta → oferty na żywo → rezerwacja, przez HTTP", async () => {
+    zegar = new Date("2026-10-04T10:00:00Z");
+    const zaloguj = async (telefon: string, rola: "klientka" | "salon") => {
+      await post("/api/logowanie/kod", { telefon });
+      const r = await post("/api/logowanie/sprawdz", { telefon, kod: wyslane.at(-1), rola, akceptujeRegulamin: true });
+      return `${CIASTECZKO_SESJI}=${tokenZ(r)}`;
+    };
+    const salonC = await zaloguj("600333111", "salon");
+    await post("/api/salon", { dane: { nazwa: "Studio Łazarz", nip: "774-000-14-54", ulica: "Głogowska 1", kodPocztowy: "60-111", miasto: "Poznań", branza: "uroda", telefon: "600333111", email: "l@b.pl" }, akceptujeRegulamin: true }, { Cookie: salonC });
+    await post("/api/salon/cennik", { pozycje: [{ usluga: "manicure_hybrydowy", cenaGr: 12000, czasMin: 60 }] }, { Cookie: salonC });
+    await post("/api/salon/przyjmowanie", { wlaczone: true }, { Cookie: salonC });
+
+    const klientkaC = await zaloguj("600333222", "klientka");
+    const noweR = await post(
+      "/api/zapytania",
+      {
+        uslugaKod: "manicure_hybrydowy", oknoOd: "2026-10-04T13:00:00Z", oknoDo: "2026-10-04T18:00:00Z", lat: 52.4083, lon: 16.934,
+        limitGr: 15000, tryb: "zbieram", liczbaOsob: null, tresc: "", zgodaZdrowie: false,
+      },
+      { Cookie: klientkaC },
+    );
+    expect(noweR.status).toBe(200);
+    const { zapytanie } = await noweR.json();
+    // salon z poprzedniego testu też jest w zasięgu i ma manicure
+    expect(zapytanie).toMatchObject({ status: "otwarte", liczbaWykonawcow: 2 });
+
+    const skrzynka = await (await get("/api/salon/zapytania", { Cookie: salonC })).json();
+    expect(skrzynka.zapytania).toHaveLength(1);
+    const oferta = await post(`/api/salon/zapytania/${zapytanie.id}/oferta`, { termin: "2026-10-04T14:30:00Z", cenaGr: 13000 }, { Cookie: salonC });
+    expect(await oferta.json()).toEqual({ ok: true, przyjeta: false });
+
+    const stan = await (await get(`/api/zapytania/${zapytanie.id}`, { Cookie: klientkaC })).json();
+    expect(stan.zapytanie.oferty).toHaveLength(1);
+    // salon nie podejrzy zapytania klientki, a zły identyfikator to 404
+    expect((await get(`/api/zapytania/${zapytanie.id}`, { Cookie: salonC })).status).toBe(404);
+    expect((await get("/api/zapytania/nie-uuid", { Cookie: klientkaC })).status).toBe(404);
+
+    const rez = await post(`/api/oferty/${stan.zapytanie.oferty[0].id}/przyjmij`, {}, { Cookie: klientkaC });
+    expect(rez.status).toBe(200);
+    expect((await rez.json()).wizyta).toMatchObject({ salonNazwa: "Studio Łazarz", telefon: "+48600333111", status: "potwierdzona" });
+    expect((await (await get("/api/wizyty", { Cookie: klientkaC })).json()).wizyty).toHaveLength(1);
+    expect((await (await get("/api/salon/wizyty", { Cookie: salonC })).json()).wizyty[0]).toMatchObject({ telefonKlientki: "+48600333222" });
+    expect((await post(`/api/oferty/${stan.zapytanie.oferty[0].id}/przyjmij`, {}, { Cookie: klientkaC })).status).toBe(409);
+  });
 });

@@ -132,21 +132,22 @@ export async function zapiszSalon(opcje: {
            telefon = $8, email = $9, numer_rejestru = $10, updated_at = $11::timestamptz,
            regulamin_wersja = coalesce($12, regulamin_wersja),
            regulamin_zaakceptowany_at = case when $12::text is null then regulamin_zaakceptowany_at else $11::timestamptz end,
-           lokalizacja = coalesce($14, lokalizacja), adres_z_mapy = coalesce($15, adres_z_mapy)
+           lokalizacja = coalesce($14, lokalizacja), adres_z_mapy = coalesce($15, adres_z_mapy),
+           lat = coalesce($16, lat), lon = coalesce($17, lon)
          where id = $13`,
-        [...wspolne, obecny.id, punkt && `POINT(${punkt.lon} ${punkt.lat})`, punkt?.opis ?? null],
+        [...wspolne, obecny.id, punkt && `POINT(${punkt.lon} ${punkt.lat})`, punkt?.opis ?? null, punkt?.lat ?? null, punkt?.lon ?? null],
       );
     } else {
       // jedno polecenie: salon i przejście konta klientki na konto salonu
       await baza(
         `with salon as (
            insert into public.salony (nazwa, nip, adres, ulica, kod_pocztowy, miasto, branza, telefon, email, numer_rejestru,
-             updated_at, created_at, regulamin_wersja, regulamin_zaakceptowany_at, wlasciciel_id, lokalizacja, adres_z_mapy)
-           values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::timestamptz, $11::timestamptz, $12, $11::timestamptz, $13, $14, $15)
+             updated_at, created_at, regulamin_wersja, regulamin_zaakceptowany_at, wlasciciel_id, lokalizacja, adres_z_mapy, lat, lon)
+           values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::timestamptz, $11::timestamptz, $12, $11::timestamptz, $13, $14, $15, $16, $17)
            returning wlasciciel_id
          )
          update public.konta k set rola = 'salon' from salon where k.id = salon.wlasciciel_id and k.rola = 'klientka'`,
-        [...wspolne, kontoId, `POINT(${punkt!.lon} ${punkt!.lat})`, punkt!.opis],
+        [...wspolne, kontoId, `POINT(${punkt!.lon} ${punkt!.lat})`, punkt!.opis, punkt!.lat, punkt!.lon],
       );
     }
   } catch (e) {

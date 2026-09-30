@@ -645,6 +645,28 @@ p { margin: 0; }
 .pole-zapytania.slucha { box-shadow: 0 0 0 4px var(--lacquer-soft), 0 12px 26px -20px var(--shadow); }
 .podpowiedz-glosu { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); margin-top: -10px; }
 
+/* ── Na żywo: oferty, wizyty, skrzynka usługodawcy ──────────────── */
+a.btn { text-decoration: none; }
+.radar-stop .radar-kola span { animation: none; }
+.radar-stop .radar-kola { color: var(--muted); }
+.radar-stop .radar-kola svg { background: var(--sunk); }
+.status-odwolana_przez_klientke .pigulka-statusu,
+.status-odwolana_przez_salon .pigulka-statusu { background: var(--sunk); color: var(--muted); }
+.skrzynka { display: flex; flex-direction: column; gap: 10px; }
+.pusto-maly { background: var(--surface); border: 1px dashed var(--line-strong); border-radius: 16px; padding: 14px 16px; font-size: 14px; color: var(--muted); }
+.tresc-klientki { font-style: italic; overflow-wrap: anywhere; }
+.zapytanie-salonu.wybrane { border-color: var(--ok); background: var(--ok-soft); }
+.oferta-inna { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 10px; margin-top: 10px; }
+.oferta-inna label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 700; color: var(--muted); min-width: 0; }
+.oferta-inna select, .oferta-inna input {
+  font: inherit; font-size: 16px; color: var(--ink); background: var(--surface); border: 1.5px solid var(--line-strong);
+  border-radius: 12px; padding: 10px 12px; min-height: 46px; width: 100%;
+}
+.oferta-inna .przyciski-rzad { grid-column: 1 / -1; }
+.odpowiedzi .btn-termin .mono { font-size: 19px; }
+.tag-wybrane { display: inline-flex; align-items: center; gap: 4px; background: var(--surface); color: var(--ok); }
+.cennik-lista a, .karta-wizyty a:not(.btn) { color: var(--lacquer-text); font-weight: 700; text-decoration: none; white-space: nowrap; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }

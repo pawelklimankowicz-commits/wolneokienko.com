@@ -18,8 +18,10 @@ export interface WyslaneZapytanie {
   tryb: TrybWyboru;
   /** tylko „Czas wolny”: rezerwacja dla grupy */
   liczbaOsob: number | null;
-  liczbaWykonawcow: number;
-  promienKm: number;
+  /** tekst wpisany lub podyktowany przez klientkę */
+  tekst: string;
+  /** wyraźna zgoda przy usługach medycznych */
+  zgodaZdrowie: boolean;
 }
 
 const KIEDY: { wartosc: Kiedy; etykieta: string }[] = [
@@ -35,26 +37,35 @@ const OSOBY = [2, 3, 4, 5, 6, 8];
 export function Zapytanie({
   tekstPoczatkowy,
   branzaPoczatkowa,
+  poprzednie,
   sluchajOdRazu = false,
+  podglad,
+  wysylam = false,
   onWyslij,
   onZamknij,
 }: {
   tekstPoczatkowy: string;
+  /** „Zmień zapytanie” z ekranu ofert — te same warunki do poprawienia */
+  poprzednie?: WyslaneZapytanie;
+  /** podgląd bez serwera: pokazujemy przykładowy zasięg */
+  podglad: boolean;
+  /** zapytanie w drodze do serwera */
+  wysylam?: boolean;
   branzaPoczatkowa?: Branza;
   /** otwarte przyciskiem mikrofonu na starcie — od razu słuchamy */
   sluchajOdRazu?: boolean;
   onWyslij: (z: WyslaneZapytanie) => void;
   onZamknij: () => void;
 }) {
-  const poczatek = parsujZapytanie(tekstPoczatkowy);
-  const [tekst, setTekst] = useState(tekstPoczatkowy);
-  const [wybranaUsluga, setWybranaUsluga] = useState<string | null>(poczatek.uslugi[0]?.kod ?? null);
-  const [kiedy, setKiedy] = useState<Kiedy>(poczatek.kiedy ?? "dzis");
-  const [odGodziny, setOdGodziny] = useState<number | null>(poczatek.odGodziny);
-  const [limitZl, setLimitZl] = useState<number | null>(poczatek.limitZl);
-  const [osoby, setOsoby] = useState<number>(poczatek.osoby ?? 2);
-  const [tryb, setTryb] = useState<TrybWyboru>("zbieram");
-  const [zgodaZdrowie, setZgodaZdrowie] = useState(false);
+  const poczatek = parsujZapytanie(poprzednie?.tekst ?? tekstPoczatkowy);
+  const [tekst, setTekst] = useState(poprzednie?.tekst ?? tekstPoczatkowy);
+  const [wybranaUsluga, setWybranaUsluga] = useState<string | null>(poprzednie?.usluga.kod ?? poczatek.uslugi[0]?.kod ?? null);
+  const [kiedy, setKiedy] = useState<Kiedy>(poprzednie?.kiedy ?? poczatek.kiedy ?? "dzis");
+  const [odGodziny, setOdGodziny] = useState<number | null>(poprzednie ? poprzednie.odGodziny : poczatek.odGodziny);
+  const [limitZl, setLimitZl] = useState<number | null>(poprzednie ? poprzednie.limitZl : poczatek.limitZl);
+  const [osoby, setOsoby] = useState<number>(poprzednie?.liczbaOsob ?? poczatek.osoby ?? 2);
+  const [tryb, setTryb] = useState<TrybWyboru>(poprzednie?.tryb ?? "zbieram");
+  const [zgodaZdrowie, setZgodaZdrowie] = useState(poprzednie?.zgodaZdrowie ?? false);
 
   const rozbior = useMemo(() => parsujZapytanie(tekst), [tekst]);
 
@@ -96,7 +107,7 @@ export function Zapytanie({
 
   const plan = useMemo(() => zaplanujFale(KANDYDACI_PODGLAD), []);
   const liczbaWykonawcow = plan.fale.reduce((n, f) => n + f.salonIds.length, 0);
-  const moznaWyslac = usluga !== null && (!medyczna || zgodaZdrowie);
+  const moznaWyslac = usluga !== null && (!medyczna || zgodaZdrowie) && !wysylam;
 
   return (
     <div className="nakladka">
@@ -226,13 +237,19 @@ export function Zapytanie({
       <footer className="nakladka-stopka">
         <p className="zasieg">
           <span className="kropka-live" aria-hidden="true" />
-          <span>
-            Zapytanie trafi do{" "}
-            <strong>
-              {liczbaWykonawcow} {liczbaWykonawcow === 1 ? opis.wykonawcaDop[0] : opis.wykonawcaDop[1]}
-            </strong>{" "}
-            w promieniu {km(plan.promienKm)}
-          </span>
+          {podglad ? (
+            <span>
+              Zapytanie trafi do{" "}
+              <strong>
+                {liczbaWykonawcow} {liczbaWykonawcow === 1 ? opis.wykonawcaDop[0] : opis.wykonawcaDop[1]}
+              </strong>{" "}
+              w promieniu {km(plan.promienKm)}
+            </span>
+          ) : (
+            <span>
+              Zapytanie trafi do <strong>{opis.wykonawcaDop[1]} w okolicy</strong>, które mają teraz wolny czas
+            </span>
+          )}
         </p>
         <button
           type="button"
@@ -240,10 +257,10 @@ export function Zapytanie({
           disabled={!moznaWyslac}
           onClick={() =>
             usluga &&
-            onWyslij({ usluga, kiedy, odGodziny, limitZl, tryb, liczbaOsob: branza === "czas_wolny" ? osoby : null, liczbaWykonawcow, promienKm: plan.promienKm })
+            onWyslij({ usluga, kiedy, odGodziny, limitZl, tryb, liczbaOsob: branza === "czas_wolny" ? osoby : null, tekst, zgodaZdrowie: medyczna && zgodaZdrowie })
           }
         >
-          {!usluga ? "Wybierz usługę" : medyczna && !zgodaZdrowie ? "Zaznacz zgodę, żeby wysłać" : "Wyślij zapytanie"}
+          {!usluga ? "Wybierz usługę" : medyczna && !zgodaZdrowie ? "Zaznacz zgodę, żeby wysłać" : wysylam ? "Wysyłam…" : "Wyślij zapytanie"}
         </button>
       </footer>
     </div>

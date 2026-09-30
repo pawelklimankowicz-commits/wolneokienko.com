@@ -19,6 +19,7 @@ import { cena, odmiana, zlote, zloteGr } from "@/lib/format";
 import { grupujNumer, telefonCzytelny } from "@/lib/telefon";
 import { Ikona, type NazwaIkony } from "@/ui/Ikona";
 import { NaglowekEkranu } from "@/ui/wspolne";
+import { SkrzynkaSalonu } from "./SkrzynkaSalonu";
 
 type Krok = "wstep" | "firma" | "cennik" | "panel";
 
@@ -586,6 +587,8 @@ function Panel({
           </span>
         </p>
       )}
+
+      {salon.cennik.length > 0 && <SkrzynkaSalonu api={api} przyjmuje={salon.przyjmujeZapytania} onInfo={onInfo} />}
 
       <section className="karta-panelu">
         <div className="karta-panelu-glowa">

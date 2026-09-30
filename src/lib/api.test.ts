@@ -34,3 +34,46 @@ describe("podgląd bez serwera", () => {
     expect(await a.ja()).toBeNull();
   });
 });
+
+describe("podgląd: zapytanie na żywo", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("oferty napływają, przyjęcie robi wizytę, druga próba jest nieaktualna", async () => {
+    vi.useFakeTimers({ now: new Date(2026, 9, 5, 10, 0) });
+    const a = apiPodglad();
+    const wyslane = a.wyslijZapytanie({
+      uslugaKod: "manicure_hybrydowy",
+      oknoOd: new Date(2026, 9, 5, 16, 0).toISOString(),
+      oknoDo: new Date(2026, 9, 5, 21, 0).toISOString(),
+      lat: 52.4,
+      lon: 16.93,
+      limitGr: null,
+      tryb: "zbieram",
+      liczbaOsob: null,
+      tresc: "",
+      zgodaZdrowie: false,
+    });
+    await vi.advanceTimersByTimeAsync(700);
+    const w = await wyslane;
+    if (!w.ok) throw new Error(w.komunikat);
+    expect(w.zapytanie).toMatchObject({ status: "otwarte", oferty: [] });
+    expect(w.zapytanie.liczbaWykonawcow).toBeGreaterThan(0);
+
+    await vi.advanceTimersByTimeAsync(10_000);
+    const stan = await a.stanZapytania(w.zapytanie.id);
+    expect(stan!.oferty.length).toBeGreaterThan(0);
+    const o = stan!.oferty[0];
+    expect(new Date(o.termin).getHours()).toBeGreaterThanOrEqual(16);
+
+    const przyjecie = a.przyjmijOferte(o.id);
+    await vi.advanceTimersByTimeAsync(500);
+    const p = await przyjecie;
+    expect(p).toMatchObject({ ok: true, wizyta: { status: "potwierdzona", cenaGr: o.cenaGr, termin: o.termin } });
+    expect((await a.stanZapytania(w.zapytanie.id))!.status).toBe("zarezerwowane");
+    expect((await a.mojeWizyty())[0].termin).toBe(o.termin);
+
+    const ponownie = a.przyjmijOferte(o.id);
+    await vi.advanceTimersByTimeAsync(500);
+    expect(await ponownie).toMatchObject({ ok: false, komunikat: expect.stringMatching(/nieaktualna/) });
+  });
+});

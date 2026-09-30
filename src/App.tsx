@@ -1,15 +1,15 @@
-// Aplikacja klientki (cztery zakładki) i podgląd aplikacji salonu.
-// Faza 1: dane przykładowe (src/dane/przyklad.ts); logika prowizji, fal
-// i rozbioru zapytań to te same moduły, które pójdą na produkcję.
-// Logowanie jest prawdziwe (src/lib/api.ts → src/serwer/api.ts): numer
-// potwierdzamy dopiero wtedy, gdy klientka wysyła zapytanie albo rezerwuje.
+// Aplikacja klientki (cztery zakładki) i panel usługodawcy.
+// Zapytania, oferty na żywo i wizyty idą przez API (src/lib/api.ts →
+// src/serwer/api.ts); zakładka Okienka i ekran startowy pokazują jeszcze
+// przykładowe okienka (src/dane/przyklad.ts). Numer potwierdzamy dopiero
+// wtedy, gdy klientka wysyła zapytanie albo rezerwuje.
 import { useCallback, useEffect, useState } from "react";
-import { salon, type Oferta, type Okienko } from "./dane/przyklad";
+import { salon, type Okienko } from "./dane/przyklad";
 import { Dokument } from "./ekrany/Dokument";
 import { Logowanie } from "./ekrany/Logowanie";
 import { Okienka } from "./ekrany/Okienka";
 import { Oferty } from "./ekrany/Oferty";
-import { Potwierdzenie, type Rezerwacja } from "./ekrany/Potwierdzenie";
+import { Potwierdzenie } from "./ekrany/Potwierdzenie";
 import { Profil } from "./ekrany/Profil";
 import { RejestracjaSalonu } from "./ekrany/RejestracjaSalonu";
 import { Salon } from "./ekrany/Salon";
@@ -17,15 +17,18 @@ import { Start } from "./ekrany/Start";
 import { Wizyty } from "./ekrany/Wizyty";
 import { Zapytanie, type WyslaneZapytanie } from "./ekrany/Zapytanie";
 import type { NazwaDokumentu } from "./domain/dokumenty";
-import type { Branza } from "./domain/katalog-uslug";
+import { KATALOG_USLUG, czyMedyczna, type Branza } from "./domain/katalog-uslug";
+import { oknoZapytania } from "./domain/okno";
+import type { StanZapytania, WizytaWidok } from "./domain/widoki";
 import { api, type Konto } from "./lib/api";
+import { pobierzLokalizacje } from "./lib/lokalizacja";
 import { Ikona, type NazwaIkony } from "./ui/Ikona";
 
 type Zakladka = "start" | "okienka" | "wizyty" | "profil";
 type Nakladka =
-  | { typ: "zapytanie"; tekst: string; branza?: Branza; glos?: boolean }
-  | { typ: "oferty"; zapytanie: WyslaneZapytanie }
-  | { typ: "potwierdzenie"; rezerwacja: Rezerwacja }
+  | { typ: "zapytanie"; tekst: string; branza?: Branza; glos?: boolean; poprzednie?: WyslaneZapytanie }
+  | { typ: "oferty"; wyslane: WyslaneZapytanie; stan: StanZapytania }
+  | { typ: "potwierdzenie"; wizyta: WizytaWidok }
   | { typ: "salon" }
   | { typ: "rejestracja" }
   | null;
@@ -36,8 +39,6 @@ const ZAKLADKI: { id: Zakladka; etykieta: string; ikona: NazwaIkony }[] = [
   { id: "wizyty", etykieta: "Wizyty", ikona: "wizyty" },
   { id: "profil", etykieta: "Profil", ikona: "profil" },
 ];
-
-const DZIEN = { teraz: "dziś", dzis: "dziś", jutro: "jutro", weekend: "sobota" } as const;
 
 export default function App() {
   const [zakladka, setZakladka] = useState<Zakladka>("start");
@@ -70,34 +71,59 @@ export default function App() {
   }, [toast]);
 
   const zapytaj = useCallback((tekst: string, branza?: Branza, glos?: boolean) => setNakladka({ typ: "zapytanie", tekst, branza, glos }), []);
+  // Okienka to jeszcze przykładowe dane: w podglądzie rezerwujemy od razu,
+  // w aplikacji otwieramy zapytanie o tę usługę na ten dzień.
   const rezerwujOkienko = useCallback(
-    (o: Okienko) =>
-      poZalogowaniu("Potwierdź numer — potem od razu zarezerwujemy termin.", () =>
+    (o: Okienko) => {
+      if (!api.podglad) return zapytaj(`${o.usluga.toLowerCase()} ${o.dzien} po ${o.godzina.split(":")[0]}`);
+      poZalogowaniu("Potwierdź numer — potem od razu zarezerwujemy termin.", () => {
+        const s = salon(o.salonId);
+        const [h, m] = o.godzina.split(":").map(Number);
+        const termin = new Date();
+        if (o.dzien === "jutro") termin.setDate(termin.getDate() + 1);
+        termin.setHours(h, m, 0, 0);
         setNakladka({
           typ: "potwierdzenie",
-          rezerwacja: { salon: salon(o.salonId), usluga: o.usluga, dzien: o.dzien, godzina: o.godzina, cenaGr: o.cenaGr },
-        }),
-      ),
-    [poZalogowaniu],
-  );
-
-  const zapytanieWToku = nakladka?.typ === "oferty" ? nakladka.zapytanie : null;
-  const wybierzOferte = useCallback(
-    (o: Oferta) => {
-      if (!zapytanieWToku) return;
-      setNakladka({
-        typ: "potwierdzenie",
-        rezerwacja: {
-          salon: salon(o.salonId),
-          usluga: zapytanieWToku.usluga.nazwa,
-          dzien: DZIEN[zapytanieWToku.kiedy],
-          godzina: o.godzina,
-          cenaGr: o.cenaGr,
-        },
+          wizyta: {
+            id: `okienko-${o.id}`,
+            salonNazwa: s.nazwa,
+            adres: s.adres,
+            telefon: "+48600100200",
+            uslugaKod: KATALOG_USLUG.find((u) => u.nazwa === o.usluga)?.kod ?? o.usluga,
+            termin: termin.toISOString(),
+            cenaGr: o.cenaGr,
+            kolory: s.okladka,
+            status: "potwierdzona",
+          },
+        });
       });
     },
-    [zapytanieWToku],
+    [poZalogowaniu, zapytaj],
   );
+
+  const [wysylam, setWysylam] = useState(false);
+  const wyslijZapytanie = useCallback(async (z: WyslaneZapytanie) => {
+    setWysylam(true);
+    const miejsce = await pobierzLokalizacje(api.podglad);
+    const okno = oknoZapytania(z.kiedy, z.odGodziny, new Date());
+    const w = await api.wyslijZapytanie({
+      uslugaKod: z.usluga.kod,
+      oknoOd: okno.od.toISOString(),
+      oknoDo: okno.do.toISOString(),
+      lat: miejsce.lat,
+      lon: miejsce.lon,
+      limitGr: z.limitZl === null ? null : z.limitZl * 100,
+      tryb: z.tryb,
+      liczbaOsob: z.liczbaOsob,
+      // przy usługach medycznych opis nie wychodzi z telefonu
+      tresc: czyMedyczna(z.usluga) ? "" : z.tekst.trim().slice(0, 300),
+      zgodaZdrowie: z.zgodaZdrowie,
+    });
+    setWysylam(false);
+    if (!w.ok) return setToast(w.komunikat);
+    setNakladka({ typ: "oferty", wyslane: z, stan: w.zapytanie });
+  }, []);
+  const pokazWizyte = useCallback((w: WizytaWidok) => setNakladka({ typ: "potwierdzenie", wizyta: w }), []);
 
   return (
     <div className="aplikacja">
@@ -106,7 +132,15 @@ export default function App() {
           <Start onZapytaj={zapytaj} onRezerwuj={rezerwujOkienko} onWszystkieOkienka={() => setZakladka("okienka")} />
         )}
         {zakladka === "okienka" && <Okienka onRezerwuj={rezerwujOkienko} onZapytaj={zapytaj} />}
-        {zakladka === "wizyty" && <Wizyty onZapytaj={(t) => zapytaj(t)} onInfo={setToast} />}
+        {zakladka === "wizyty" && (
+          <Wizyty
+            api={api}
+            konto={konto}
+            onZapytaj={(t) => zapytaj(t)}
+            onZaloguj={() => setLogowanie({ potem: () => setToast("Zalogowano.") })}
+            onInfo={setToast}
+          />
+        )}
         {zakladka === "profil" && (
           <Profil
             konto={konto ?? null}
@@ -144,18 +178,29 @@ export default function App() {
         <Zapytanie
           tekstPoczatkowy={nakladka.tekst}
           branzaPoczatkowa={nakladka.branza}
+          poprzednie={nakladka.poprzednie}
           sluchajOdRazu={nakladka.glos}
+          podglad={api.podglad}
+          wysylam={wysylam}
           onZamknij={() => setNakladka(null)}
-          onWyslij={(z) => poZalogowaniu("Potwierdź numer — potem od razu wyślemy zapytanie.", () => setNakladka({ typ: "oferty", zapytanie: z }))}
+          onWyslij={(z) => poZalogowaniu("Potwierdź numer — potem od razu wyślemy zapytanie.", () => wyslijZapytanie(z))}
         />
       )}
       {nakladka?.typ === "oferty" && (
-        <Oferty zapytanie={nakladka.zapytanie} onWybierz={wybierzOferte} onAnuluj={() => setNakladka(null)} />
+        <Oferty
+          key={nakladka.stan.id}
+          wyslane={nakladka.wyslane}
+          stanPoczatkowy={nakladka.stan}
+          api={api}
+          onPrzyjeto={pokazWizyte}
+          onZamknij={() => setNakladka(null)}
+          onZmien={() => setNakladka({ typ: "zapytanie", tekst: nakladka.wyslane.tekst, poprzednie: nakladka.wyslane })}
+          onInfo={setToast}
+        />
       )}
       {nakladka?.typ === "potwierdzenie" && (
         <Potwierdzenie
-          r={nakladka.rezerwacja}
-          onInfo={setToast}
+          w={nakladka.wizyta}
           onGotowe={() => {
             setNakladka(null);
             setZakladka("wizyty");

@@ -10,6 +10,17 @@
 //   POST /api/salon              { dane, akceptujeRegulamin } → załóż / popraw dane firmy
 //   POST /api/salon/cennik       { pozycje }                 → zapisz cały cennik
 //   POST /api/salon/przyjmowanie { wlaczone }                → przyjmuję zapytania: tak / nie
+//   GET  /api/salon/zapytania                                → zapytania z okolicy (skrzynka salonu)
+//   POST /api/salon/zapytania/:id/oferta { termin, cenaGr }  → oferta jednym dotknięciem
+//   POST /api/salon/zapytania/:id/odmowa                     → „nie mam czasu”
+//   GET  /api/salon/wizyty                                   → nadchodzące wizyty salonu
+//   POST /api/zapytania          { NoweZapytanie }           → wyślij zapytanie (rozesłanie falami)
+//   GET  /api/zapytania/:id                                  → stan z ofertami na żywo
+//   POST /api/zapytania/:id/anuluj
+//   POST /api/oferty/:id/przyjmij                            → rezerwacja
+//   GET  /api/wizyty                                         → wizyty klientki
+//   POST /api/wizyty/:id/odwolaj
+//   POST /api/wizyty/:id/potwierdz { odpowiedz }             → po terminie: byłam / nie byłam / salon odwołał
 //
 // Sesja w ciasteczku HttpOnly (JavaScript strony go nie widzi). Ochrona przed
 // CSRF: POST przyjmuje tylko JSON — przeglądarka nie wyśle go z obcej strony
@@ -22,6 +33,18 @@ import type { BramkaSms } from "./bramka-sms";
 import type { Geokoder } from "./geokoder";
 import { sprawdzKod, wyslijKod, type Rola } from "./kody-sms";
 import { mojSalon, ustawPrzyjmowanie, zapiszCennik, zapiszSalon } from "./salony";
+import { odmowZapytania, wizytySalonu, zapytaniaSalonu, zlozOferte } from "./skrzynka";
+import {
+  anulujZapytanie,
+  odwolajWizyte,
+  potwierdzWizyte,
+  przyjmijOferte,
+  stanZapytania,
+  wizytyKlientki,
+  wyslijZapytanie,
+  zakonczPrzeterminowane,
+} from "./zapytania";
+import type { NoweZapytanie } from "../domain/widoki";
 import { PARAMETRY_SESJI, sesjaZTokenu, utworzSesje, wyloguj, type SesjaKonta } from "./sesje";
 
 export interface ZaleznosciApi {
@@ -68,6 +91,28 @@ async function cialoJson(zadanie: Request): Promise<Record<string, unknown> | nu
 }
 
 const napis = (x: unknown) => (typeof x === "string" ? x : "");
+const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+/** Dopasowanie ścieżki z identyfikatorem, np. `trasa(pathname, "/api/zapytania/:id/anuluj")` → id albo null. */
+function trasa(pathname: string, wzor: string): string | null {
+  const m = pathname.match(new RegExp(`^${wzor.replace(":id", `(${UUID})`)}$`));
+  return m ? m[1] : null;
+}
+
+function noweZapytanie(x: Record<string, unknown>): NoweZapytanie {
+  const liczbaLubNull = (v: unknown) => (typeof v === "number" ? v : null);
+  return {
+    uslugaKod: napis(x.uslugaKod),
+    oknoOd: napis(x.oknoOd),
+    oknoDo: napis(x.oknoDo),
+    lat: typeof x.lat === "number" ? x.lat : NaN,
+    lon: typeof x.lon === "number" ? x.lon : NaN,
+    limitGr: liczbaLubNull(x.limitGr),
+    tryb: x.tryb === "pierwsza" ? "pierwsza" : "zbieram",
+    liczbaOsob: liczbaLubNull(x.liczbaOsob),
+    tresc: napis(x.tresc),
+    zgodaZdrowie: x.zgodaZdrowie === true,
+  };
+}
 const liczba = (x: unknown) => (typeof x === "number" ? x : NaN);
 
 function daneSalonu(x: unknown): DaneSalonu {
@@ -196,10 +241,71 @@ export function utworzApi(z: ZaleznosciApi) {
         if (w.ok) return json(200, { salon: w.salon });
         return json(w.blad === "brak_salonu" ? 404 : 400, w.blad === "zle_dane" ? { blad: w.blad, cennik: w.cennik } : { blad: w.blad });
       }
+      if (pathname === "/api/salon/zapytania" && metoda === "GET") {
+        await zakonczPrzeterminowane(z.baza, teraz());
+        const lista = await zapytaniaSalonu({ baza: z.baza, kontoId, teraz: teraz() });
+        return lista ? json(200, { zapytania: lista }) : json(404, { blad: "brak_salonu" });
+      }
+      if (pathname === "/api/salon/wizyty" && metoda === "GET") {
+        const lista = await wizytySalonu({ baza: z.baza, kontoId, teraz: teraz() });
+        return lista ? json(200, { wizyty: lista }) : json(404, { blad: "brak_salonu" });
+      }
+      const doOferty = trasa(pathname, "/api/salon/zapytania/:id/oferta");
+      if (doOferty && cialo) {
+        const w = await zlozOferte({ baza: z.baza, kontoId, zapytanieId: doOferty, termin: napis(cialo.termin), cenaGr: liczba(cialo.cenaGr), teraz: teraz() });
+        return w.ok ? json(200, w) : json(w.blad === "nieaktualne" || w.blad === "brak_salonu" ? 409 : 400, { blad: w.blad });
+      }
+      const doOdmowy = trasa(pathname, "/api/salon/zapytania/:id/odmowa");
+      if (doOdmowy && cialo) {
+        return (await odmowZapytania({ baza: z.baza, kontoId, zapytanieId: doOdmowy, teraz: teraz() })) ? json(200, { ok: true }) : json(409, { blad: "nieaktualne" });
+      }
       if (pathname === "/api/salon/przyjmowanie" && cialo) {
         const w = await ustawPrzyjmowanie({ baza: z.baza, kontoId, wlaczone: cialo.wlaczone === true, teraz: teraz() });
         if (w.ok) return json(200, { salon: w.salon });
         return json(w.blad === "brak_salonu" ? 404 : 409, { blad: w.blad });
+      }
+    }
+
+    // ── Zapytania, oferty i wizyty klientki ──
+    if (pathname === "/api/zapytania" || pathname.startsWith("/api/zapytania/") || pathname.startsWith("/api/oferty/") || pathname === "/api/wizyty" || pathname.startsWith("/api/wizyty/")) {
+      const sesja = await zalogowany(zadanie);
+      if (!sesja) return json(401, { blad: "niezalogowany" });
+      const kontoId = sesja.kontoId;
+      const cialo = metoda === "POST" ? await cialoJson(zadanie) : null;
+      if (metoda === "POST" && !cialo) return json(400, { blad: "zly_format" });
+
+      if (pathname === "/api/zapytania" && cialo) {
+        await zakonczPrzeterminowane(z.baza, teraz());
+        const w = await wyslijZapytanie({ baza: z.baza, kontoId, dane: noweZapytanie(cialo), teraz: teraz() });
+        if (w.ok) return json(200, { zapytanie: w.zapytanie });
+        return json(w.blad === "zle_dane" || w.blad === "brak_zgody" ? 400 : 429, w);
+      }
+      const stanId = trasa(pathname, "/api/zapytania/:id");
+      if (stanId && metoda === "GET") {
+        await zakonczPrzeterminowane(z.baza, teraz());
+        const stan = await stanZapytania({ baza: z.baza, kontoId, zapytanieId: stanId, teraz: teraz() });
+        return stan ? json(200, { zapytanie: stan }) : json(404, { blad: "nie_ma" });
+      }
+      const anulujId = trasa(pathname, "/api/zapytania/:id/anuluj");
+      if (anulujId && cialo) {
+        return (await anulujZapytanie({ baza: z.baza, kontoId, zapytanieId: anulujId })) ? json(200, { ok: true }) : json(409, { blad: "nieaktualne" });
+      }
+      const ofertaId = trasa(pathname, "/api/oferty/:id/przyjmij");
+      if (ofertaId && cialo) {
+        const w = await przyjmijOferte({ baza: z.baza, kontoId, ofertaId, teraz: teraz() });
+        return w.ok ? json(200, { wizyta: w.wizyta }) : json(409, { blad: w.blad });
+      }
+      if (pathname === "/api/wizyty" && metoda === "GET") return json(200, { wizyty: await wizytyKlientki({ baza: z.baza, kontoId, teraz: teraz() }) });
+      const odwolajId = trasa(pathname, "/api/wizyty/:id/odwolaj");
+      if (odwolajId && cialo) {
+        return (await odwolajWizyte({ baza: z.baza, kontoId, rezerwacjaId: odwolajId, teraz: teraz() })) ? json(200, { ok: true }) : json(409, { blad: "nieaktualne" });
+      }
+      const potwierdzId = trasa(pathname, "/api/wizyty/:id/potwierdz");
+      if (potwierdzId && cialo) {
+        const odp = cialo.odpowiedz;
+        if (odp !== "bylam" && odp !== "nie_bylam" && odp !== "salon_odwolal") return json(400, { blad: "zly_format" });
+        const ok = await potwierdzWizyte({ baza: z.baza, kontoId, rezerwacjaId: potwierdzId, odpowiedz: odp, teraz: teraz() });
+        return ok ? json(200, { ok: true }) : json(409, { blad: "nieaktualne" });
       }
     }
 
