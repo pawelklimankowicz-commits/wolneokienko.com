@@ -21,7 +21,8 @@ describe("podzielSql", () => {
     const katalog = path.resolve(__dirname, "../baza/migrations");
     for (const plik of readdirSync(katalog).filter((f) => f.endsWith(".sql"))) {
       const polecenia = podzielSql(readFileSync(path.join(katalog, plik), "utf8"));
-      expect(polecenia.length).toBeGreaterThan(5);
+      expect(polecenia.length).toBeGreaterThan(0);
+      expect(polecenia.every((p) => /^(create|alter|insert|update|comment|do|drop)\b/i.test(p))).toBe(true);
       expect(polecenia.every((p) => p.length > 0 && !p.startsWith("--"))).toBe(true);
     }
   });

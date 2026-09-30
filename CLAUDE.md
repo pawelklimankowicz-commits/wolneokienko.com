@@ -35,6 +35,22 @@ i dopasowania są tutaj i mają testy:
 
 Kwoty zawsze w groszach (liczby całkowite).
 
+## Serwer (`src/serwer/`)
+
+Kod po stronie serwera, pisany na Web Crypto i `fetch`, żeby bez zmian poszedł
+do Cloudflare Workers. Baza przez typ `Baza` (zapytanie SQL → wiersze): na
+produkcji `bazaNeon`, w testach `bazaTestowa()` — PGlite z prawdziwymi migracjami.
+
+- `kody-sms.ts` — logowanie kodem SMS: 6 cyfr, 5 minut, 5 prób, liczy się
+  najnowszy kod; limity 30 s / 3 na 15 min / 10 na dobę; w bazie tylko HMAC kodu;
+- `sesje.ts` — token 32 bajty, w bazie SHA-256, 90 dni od ostatniego użycia;
+- `bramka-sms.ts` — SMSAPI (konto Prometheusa; błędy przychodzą jako HTTP 200
+  z polem `error`);
+- `telefon.ts` — tylko polskie numery, zapis `+48XXXXXXXXX`.
+
+Sekrety w `.env.local` (poza gitem): `DATABASE_URL`, `SMSAPI_TOKEN`,
+`KODY_SMS_PIEPRZ` (klucz HMAC kodów — zmiana unieważnia tylko kody w drodze).
+
 ## Weryfikacja przed pushem — lokalnie
 
 ```bash

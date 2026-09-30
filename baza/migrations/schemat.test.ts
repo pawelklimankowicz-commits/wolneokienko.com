@@ -1,30 +1,11 @@
 // Sprawdza, że migracje wykonują się na czystym Postgresie (PGlite, w procesie).
-// PGlite nie ma PostGIS, więc test pomija `create extension postgis`,
-// a `extensions.geography(point, 4326)` zamienia na `text`
-//    i indeks GiST na zwykły.
-// Reszta SQL (typy, klucze, CHECK-i, RLS) wykonuje się bez zmian.
-import { PGlite } from "@electric-sql/pglite";
-import { readdirSync, readFileSync } from "fs";
-import path from "path";
-
-const katalog = path.resolve(__dirname);
-
-function dlaPglite(sql: string): string {
-  return sql
-    .replace(/create extension if not exists postgis[^;]*;/gi, "")
-    .replace(/(extensions\.)?geography\s*\(\s*point\s*,\s*4326\s*\)/gi, "text")
-    .replace(/using gist \((\w+)\)/gi, "($1)");
-}
+// Zamiany pod PGlite (bez PostGIS) opisuje src/serwer/baza-testowa.ts.
+import { bazaTestowa, plikiMigracji } from "@/serwer/baza-testowa";
 
 describe("migracje", () => {
   it("wykonują się po kolei na czystej bazie i pilnują kluczowych reguł", async () => {
-    const db = new PGlite();
-
-    const pliki = readdirSync(katalog).filter((f) => f.endsWith(".sql")).sort();
-    expect(pliki.length).toBeGreaterThan(0);
-    for (const plik of pliki) {
-      await db.exec(dlaPglite(readFileSync(path.join(katalog, plik), "utf8")));
-    }
+    expect(plikiMigracji().length).toBeGreaterThan(0);
+    const { pglite: db } = await bazaTestowa();
 
     // telefon w formacie międzynarodowym
     await expect(db.query("insert into public.konta (telefon, rola) values ('600123123', 'klientka')")).rejects.toThrow();
