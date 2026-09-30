@@ -18,6 +18,7 @@ Baza z terminala (klucz `NEON_API_KEY` w `.env.local`, poza gitem):
 ```bash
 npm run db:utworz    # projekt „wolne-okienko” we Frankfurcie, zapisuje DATABASE_URL
 npm run db:migrate   # wykonuje nowe pliki z baza/migrations
+npm run db:katalog   # wgrywa katalog usług z src/domain/katalog-uslug.ts
 npm run db:status
 ```
 

@@ -17,7 +17,8 @@
     "verify": "npm run typecheck && npm run lint && npm test && npm run build",
     "db:utworz": "node scripts/neon-api.mjs utworz-projekt",
     "db:migrate": "node scripts/neon-api.mjs migrate",
-    "db:status": "node scripts/neon-api.mjs status"
+    "db:status": "node scripts/neon-api.mjs status",
+    "db:katalog": "node --experimental-strip-types --no-warnings scripts/neon-api.mjs katalog"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

@@ -5,6 +5,8 @@
 //   node scripts/neon-api.mjs utworz-projekt   projekt „wolne-okienko” we Frankfurcie
 //   node scripts/neon-api.mjs migrate          wykonuje nowe pliki z baza/migrations
 //   node scripts/neon-api.mjs status           projekt i wykonane migracje
+//   node --experimental-strip-types scripts/neon-api.mjs katalog
+//                                              wgrywa katalog usług z src/domain/katalog-uslug.ts
 //
 // Klucz: NEON_API_KEY ze zmiennej środowiskowej albo z .env.local / .env
 // (pierwszy, którego API nie odbija 401). Wartość klucza nie jest wypisywana.
@@ -139,6 +141,28 @@ async function migrate() {
   console.log(ile ? `Wykonano migracji: ${ile}.` : "Baza jest aktualna, brak nowych migracji.");
 }
 
+/** Katalog usług z kodu → tabela public.uslugi (wstaw albo zaktualizuj; nic nie usuwa). */
+async function katalog() {
+  const { KATALOG_USLUG, KATEGORIE_KATALOGU, BRANZE } = await import("../src/domain/katalog-uslug.ts");
+  const sql = baza();
+  const medyczne = new Set(BRANZE.filter((b) => b.medyczna).map((b) => b.id));
+  await sql.transaction(
+    KATALOG_USLUG.map((u) => {
+      const branza = KATEGORIE_KATALOGU[u.kategoria].branza;
+      return sql.query(
+        `insert into public.uslugi (kod, nazwa, kategoria, branza, medyczna, typowy_czas_min, bez_promocji, wymaga_lekarza, wymaga_deklaracji_kwalifikacji)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         on conflict (kod) do update set nazwa = excluded.nazwa, kategoria = excluded.kategoria, branza = excluded.branza,
+           medyczna = excluded.medyczna, typowy_czas_min = excluded.typowy_czas_min, bez_promocji = excluded.bez_promocji,
+           wymaga_lekarza = excluded.wymaga_lekarza, wymaga_deklaracji_kwalifikacji = excluded.wymaga_deklaracji_kwalifikacji`,
+        [u.kod, u.nazwa, u.kategoria, branza, medyczne.has(branza), u.typowyCzasMin, !!u.bezPromocji, !!u.wymagaLekarza, !!u.wymagaDeklaracjiKwalifikacji],
+      );
+    }),
+  );
+  const [{ n, m }] = await sql.query("select count(*)::int as n, count(*) filter (where medyczna)::int as m from public.uslugi");
+  console.log(`Katalog w bazie: ${n} usług, w tym ${m} medycznych.`);
+}
+
 async function status() {
   const id = zmienna("NEON_PROJECT_ID");
   if (id) {
@@ -152,7 +176,7 @@ async function status() {
   if (!wiersze.length) console.log("  (brak wykonanych migracji)");
 }
 
-const polecenia = { "utworz-projekt": utworzProjekt, migrate, status };
+const polecenia = { "utworz-projekt": utworzProjekt, migrate, katalog, status };
 const komenda = process.argv[2];
 if (!polecenia[komenda]) {
   console.error(`Użycie: node scripts/neon-api.mjs <${Object.keys(polecenia).join(" | ")}>`);
