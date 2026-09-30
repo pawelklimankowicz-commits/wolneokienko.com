@@ -1,4 +1,5 @@
 // Prawdziwe API (/api/…, src/serwer/api.ts), sesja w ciasteczku HttpOnly.
+import type { ProfilPubliczny } from "../domain/profil-salonu";
 import type { SalonKonta } from "../domain/rejestracja-salonu";
 import type { StanZapytania, WizytaSalonu, WizytaWidok, ZapytanieDlaSalonu } from "../domain/widoki";
 import { BRAK_SIECI, komunikatBledu, type KlientApi, type Konto, type Wynik } from "./api-typy";
@@ -60,6 +61,16 @@ export function apiHttp(): KlientApi {
     zapiszSalon: (dane, akceptujeRegulamin) => wynik<"salon", SalonKonta>("/api/salon", { dane, akceptujeRegulamin }, "salon"),
     zapiszCennik: (pozycje) => wynik<"salon", SalonKonta>("/api/salon/cennik", { pozycje }, "salon"),
     ustawPrzyjmowanie: (wlaczone) => wynik<"salon", SalonKonta>("/api/salon/przyjmowanie", { wlaczone }, "salon"),
+    zapiszOpis: (opis) => wynik<"salon", SalonKonta>("/api/salon/opis", { opis }, "salon"),
+    dodajZdjecie: (rodzaj, dane, oswiadczenie) => wynik<"salon", SalonKonta>("/api/salon/zdjecia", { rodzaj, dane, oswiadczenie }, "salon"),
+    usunZdjecie: (id) => wynik<"salon", SalonKonta>(`/api/salon/zdjecia/${id}/usun`, {}, "salon"),
+    zapiszPracownikow: (pracownicy) => wynik<"salon", SalonKonta>("/api/salon/pracownicy", { pracownicy }, "salon"),
+    polaczKalendarz: (adres) => wynik<"salon", SalonKonta>("/api/salon/kalendarz", { adres }, "salon"),
+    odlaczKalendarz: () => wynik<"salon", SalonKonta>("/api/salon/kalendarz/odlacz", {}, "salon"),
+    async profilSalonu(id) {
+      const r = await zadanie(`/api/salony/${id}`);
+      return r?.status === 200 ? (r.dane.salon as ProfilPubliczny) : null;
+    },
 
     wyslijZapytanie: (dane) => wynik<"zapytanie", StanZapytania>("/api/zapytania", dane, "zapytanie"),
     async stanZapytania(id) {
@@ -75,8 +86,8 @@ export function apiHttp(): KlientApi {
     potwierdzWizyte: (id, odpowiedz) => bezDanych(`/api/wizyty/${id}/potwierdz`, { odpowiedz }),
 
     skrzynkaSalonu: () => lista<ZapytanieDlaSalonu>("/api/salon/zapytania", "zapytania"),
-    async zlozOferte(zapytanieId, termin, cenaGr) {
-      const r = await zadanie(`/api/salon/zapytania/${zapytanieId}/oferta`, { termin, cenaGr });
+    async zlozOferte(zapytanieId, termin, cenaGr, pracownik = null) {
+      const r = await zadanie(`/api/salon/zapytania/${zapytanieId}/oferta`, { termin, cenaGr, pracownik });
       if (!r) return BRAK_SIECI;
       return r.status === 200 ? { ok: true, przyjeta: r.dane.przyjeta === true } : { ok: false, ...komunikatBledu(r.dane) };
     },

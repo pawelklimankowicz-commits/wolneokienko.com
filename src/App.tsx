@@ -86,6 +86,7 @@ export default function App() {
           typ: "potwierdzenie",
           wizyta: {
             id: `okienko-${o.id}`,
+            salonId: s.id,
             salonNazwa: s.nazwa,
             adres: s.adres,
             telefon: "+48600100200",
@@ -94,6 +95,8 @@ export default function App() {
             cenaGr: o.cenaGr,
             kolory: s.okladka,
             status: "potwierdzona",
+            pracownik: null,
+            logoUrl: null,
           },
         });
       });

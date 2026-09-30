@@ -40,6 +40,12 @@ export function Potwierdzenie({ w, onGotowe }: { w: WizytaWidok; onGotowe: () =>
                 <dt>Usługa</dt>
                 <dd>{usluga?.nazwa ?? w.uslugaKod}</dd>
               </div>
+              {w.pracownik && (
+                <div>
+                  <dt>Wykonuje</dt>
+                  <dd>{w.pracownik}</dd>
+                </div>
+              )}
               <div>
                 <dt>Termin</dt>
                 <dd>{terminCzytelny(termin, new Date())}</dd>

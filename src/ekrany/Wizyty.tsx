@@ -43,8 +43,9 @@ function KartaWizyty({
         <span className="pigulka-statusu">{ETYKIETA[w.status]}</span>
         <h3>{nazwaUslugi(w.uslugaKod)}</h3>
         <p className="salon-rzad">
-          <AwatarKolory nazwa={w.salonNazwa} kolory={w.kolory} rozmiar={30} />
+          <AwatarKolory nazwa={w.salonNazwa} kolory={w.kolory} rozmiar={30} logoUrl={w.logoUrl} />
           {w.salonNazwa}
+          {w.pracownik && <span className="wyciszony"> · {w.pracownik}</span>}
         </p>
         <p className="wyciszony maly">
           {cena(w.cenaGr)} · płatne na miejscu{w.status === "potwierdzona" ? ` · ${w.adres}` : ""}

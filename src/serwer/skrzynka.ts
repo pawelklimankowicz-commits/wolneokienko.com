@@ -4,7 +4,7 @@
 
 import { czyMedyczna, KATALOG_USLUG } from "../domain/katalog-uslug";
 import { LIMITY_CENNIKA } from "../domain/rejestracja-salonu";
-import type { StatusWizyty, WizytaSalonu, ZapytanieDlaSalonu } from "../domain/widoki";
+import type { Przedzial, StatusWizyty, WizytaSalonu, ZapytanieDlaSalonu } from "../domain/widoki";
 import { czas, type Baza } from "./baza";
 import { przyjmijOferte, statusWizyty } from "./zapytania";
 
@@ -26,7 +26,13 @@ async function salonKonta(baza: Baza, kontoId: string) {
  * razem z odpowiedziami salonu. Pierwsze pobranie zapisuje, że zapytanie
  * zostało salonowi pokazane.
  */
-export async function zapytaniaSalonu(opcje: { baza: Baza; kontoId: string; teraz?: Date }): Promise<ZapytanieDlaSalonu[] | null> {
+export async function zapytaniaSalonu(opcje: {
+  baza: Baza;
+  kontoId: string;
+  teraz?: Date;
+  /** zajętość z kalendarza salonu (src/serwer/kalendarz.ts) — przycinana do okna każdego zapytania */
+  zajete?: Przedzial[];
+}): Promise<ZapytanieDlaSalonu[] | null> {
   const { baza } = opcje;
   const teraz = opcje.teraz ?? new Date();
   const salon = await salonKonta(baza, opcje.kontoId);
@@ -34,14 +40,15 @@ export async function zapytaniaSalonu(opcje: { baza: Baza; kontoId: string; tera
   const wiersze = await baza<{
     id: string; usluga_kod: string; okno_od: Date | string; okno_do: Date | string; limit_ceny_gr: number | null; liczba_osob: number | null;
     odleglosc_km: string | null; tresc: string | null; wygasa_at: Date | string; cena_gr: number | null; czas_min: number | null;
-    odmowa: boolean; oferta_termin: Date | string | null; oferta_cena: number | null; oferta_status: string | null;
+    odmowa: boolean; oferta_termin: Date | string | null; oferta_cena: number | null; oferta_status: string | null; oferta_pracownik: string | null;
   }>(
     `with pokazane as (
        update public.rozeslania set wyslano_at = $2::timestamptz
        where salon_id = $1 and wyslano_at is null and zaplanowano_na <= $2::timestamptz
      )
      select z.id, z.usluga_kod, z.okno_od, z.okno_do, z.limit_ceny_gr, z.liczba_osob, r.odleglosc_km, z.tresc, z.wygasa_at,
-       c.cena_gr, c.czas_min, r.odmowa, o.termin as oferta_termin, o.cena_gr as oferta_cena, o.status as oferta_status
+       c.cena_gr, c.czas_min, r.odmowa, o.termin as oferta_termin, o.cena_gr as oferta_cena, o.status as oferta_status,
+       o.pracownik_imie as oferta_pracownik
      from public.rozeslania r
      join public.zapytania z on z.id = r.zapytanie_id
      left join public.cennik c on c.salon_id = r.salon_id and c.usluga_kod = z.usluga_kod
@@ -67,16 +74,24 @@ export async function zapytaniaSalonu(opcje: { baza: Baza; kontoId: string; tera
       mojaCenaGr: w.cena_gr,
       czasMin: w.czas_min ?? usluga?.typowyCzasMin ?? 60,
       mojaOferta: w.oferta_termin && w.oferta_cena !== null
-        ? { termin: iso(w.oferta_termin), cenaGr: w.oferta_cena, status: w.oferta_status as NonNullable<ZapytanieDlaSalonu["mojaOferta"]>["status"] }
+        ? {
+            termin: iso(w.oferta_termin),
+            cenaGr: w.oferta_cena,
+            pracownik: w.oferta_pracownik,
+            status: w.oferta_status as NonNullable<ZapytanieDlaSalonu["mojaOferta"]>["status"],
+          }
         : null,
       odmowa: w.odmowa,
+      zajete: (opcje.zajete ?? [])
+        .filter((p) => p.od < iso(w.okno_do) && iso(w.okno_od) < p.do)
+        .slice(0, 50),
     };
   });
 }
 
 export type WynikOferty =
   | { ok: true; przyjeta: boolean }
-  | { ok: false; blad: "brak_salonu" | "nieaktualne" | "wstrzymany" | "zly_termin" | "zla_cena" | "powyzej_limitu" };
+  | { ok: false; blad: "brak_salonu" | "nieaktualne" | "wstrzymany" | "zly_termin" | "zla_cena" | "powyzej_limitu" | "zly_pracownik" };
 
 /** Pierwsza odpowiedź salonu podnosi jego wskaźnik odpowiedzi (średnia krocząca). */
 const sqlPodniesWskaznik = `update public.salony set wskaznik_odpowiedzi = round((wskaznik_odpowiedzi * 0.9 + 0.1)::numeric, 3) where id = $1`;
@@ -87,6 +102,8 @@ export async function zlozOferte(opcje: {
   zapytanieId: string;
   termin: string;
   cenaGr: number;
+  /** imię z listy pracowników salonu, u którego będzie wizyta */
+  pracownik?: string | null;
   teraz?: Date;
 }): Promise<WynikOferty> {
   const { baza, zapytanieId } = opcje;
@@ -107,12 +124,18 @@ export async function zlozOferte(opcje: {
   if (isNaN(termin.getTime()) || termin < new Date(z.okno_od) || termin > new Date(z.okno_do) || termin.getTime() < teraz.getTime() + MIN_WYPRZEDZENIE_MIN * 60 * 1000)
     return { ok: false, blad: "zly_termin" };
   if (z.limit_ceny_gr !== null && opcje.cenaGr > z.limit_ceny_gr) return { ok: false, blad: "powyzej_limitu" };
+  const pracownik = opcje.pracownik?.trim() || null;
+  if (pracownik) {
+    const [jest] = await baza("select 1 from public.pracownicy where salon_id = $1 and imie = $2", [salon.id, pracownik]);
+    if (!jest) return { ok: false, blad: "zly_pracownik" };
+  }
 
   const [oferta] = await baza<{ id: string }>(
     `with o as (
-       insert into public.oferty (zapytanie_id, salon_id, termin, cena_gr, created_at)
-       values ($1, $2, $3::timestamptz, $4, $5::timestamptz)
-       on conflict (zapytanie_id, salon_id) do update set termin = excluded.termin, cena_gr = excluded.cena_gr, status = 'zlozona'
+       insert into public.oferty (zapytanie_id, salon_id, termin, cena_gr, created_at, pracownik_imie)
+       values ($1, $2, $3::timestamptz, $4, $5::timestamptz, $6)
+       on conflict (zapytanie_id, salon_id) do update
+         set termin = excluded.termin, cena_gr = excluded.cena_gr, pracownik_imie = excluded.pracownik_imie, status = 'zlozona'
          where public.oferty.status = 'zlozona'
        returning id
      ), r as (
@@ -120,7 +143,7 @@ export async function zlozOferte(opcje: {
        where zapytanie_id = $1 and salon_id = $2 and exists (select 1 from o)
      )
      select id from o`,
-    [zapytanieId, salon.id, termin.toISOString(), opcje.cenaGr, czas(teraz)],
+    [zapytanieId, salon.id, termin.toISOString(), opcje.cenaGr, czas(teraz), pracownik],
   );
   if (!oferta) return { ok: false, blad: "nieaktualne" };
   if (!z.odpowiedziano_at) await baza(sqlPodniesWskaznik, [salon.id]);
@@ -157,8 +180,9 @@ export async function wizytySalonu(opcje: { baza: Baza; kontoId: string; teraz?:
   if (!salon) return null;
   const wiersze = await opcje.baza<{
     id: string; usluga_kod: string; termin: Date | string; cena_gr: number; telefon: string; wynik: string | null; potwierdzenie_klientki: string | null;
+    pracownik_imie: string | null;
   }>(
-    `select r.id, z.usluga_kod, r.termin, r.cena_gr, k.telefon, r.wynik, r.potwierdzenie_klientki
+    `select r.id, z.usluga_kod, r.termin, r.cena_gr, k.telefon, r.wynik, r.potwierdzenie_klientki, o.pracownik_imie
      from public.rezerwacje r
      join public.oferty o on o.id = r.oferta_id
      join public.zapytania z on z.id = o.zapytanie_id
@@ -175,5 +199,6 @@ export async function wizytySalonu(opcje: { baza: Baza; kontoId: string; teraz?:
     cenaGr: w.cena_gr,
     telefonKlientki: w.telefon,
     status: statusWizyty(w, teraz) as StatusWizyty,
+    pracownik: w.pracownik_imie,
   }));
 }

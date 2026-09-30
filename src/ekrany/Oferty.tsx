@@ -8,6 +8,7 @@ import type { KlientApi } from "@/lib/api";
 import { cena, km, mmss, odmiana } from "@/lib/format";
 import { Ikona } from "@/ui/Ikona";
 import { AwatarKolory, NaglowekEkranu } from "@/ui/wspolne";
+import { ProfilSalonu } from "./ProfilSalonu";
 import type { WyslaneZapytanie } from "./Zapytanie";
 
 type Sortowanie = "najszybciej" | "najtaniej" | "najblizej";
@@ -40,6 +41,8 @@ export function Oferty({
   const [start] = useState(() => Date.now());
   const [sort, setSort] = useState<Sortowanie>("najszybciej");
   const [wybieram, setWybieram] = useState<string | null>(null);
+  /** profil salonu otwarty z karty oferty */
+  const [profil, setProfil] = useState<string | null>(null);
   const opis = opisBranzy(branzaUslugi(wyslane.usluga));
   const medyczna = czyMedyczna(wyslane.usluga);
 
@@ -189,10 +192,14 @@ export function Oferty({
             oferty.map((o, i) => (
               <article key={o.id} className={`karta-oferty ${i === 0 && sort === "najszybciej" && !medyczna ? "najlepsza" : ""}`}>
                 <div className="karta-oferty-gora">
-                  <AwatarKolory nazwa={o.salonNazwa} kolory={o.kolory} rozmiar={42} />
+                  <AwatarKolory nazwa={o.salonNazwa} kolory={o.kolory} rozmiar={42} logoUrl={o.logoUrl} />
                   <div className="karta-oferty-salon">
                     <h3>{o.salonNazwa}</h3>
                     <p className="wyciszony maly">{[o.odlegloscKm !== null ? km(o.odlegloscKm) : null, o.okolica].filter(Boolean).join(" · ")}</p>
+                    {o.pracownik && <p className="maly">Wykonuje: {o.pracownik}</p>}
+                    <button type="button" className="link link-maly" onClick={() => setProfil(o.salonId)}>
+                      Zobacz salon
+                    </button>
                   </div>
                   <div className="karta-oferty-termin">
                     <span className="wyciszony maly">{kiedyOferta(o.termin).dzien}</span>
@@ -245,6 +252,7 @@ export function Oferty({
           {medyczna ? "Kolejność według terminu. Bez promocji i płatnych wyróżnień. " : ""}Płacisz na miejscu. Nie pobieramy przedpłat.
         </p>
       </div>
+      {profil && <ProfilSalonu api={api} salonId={profil} onZamknij={() => setProfil(null)} />}
     </div>
   );
 }

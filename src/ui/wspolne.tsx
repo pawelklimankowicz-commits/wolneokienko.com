@@ -74,8 +74,9 @@ export function EtykietaPodgladu() {
   return <span className="etykieta-podgladu">Podgląd · przykładowe dane</span>;
 }
 
-/** Awatar usługodawcy z danych API: pierwsza litera nazwy na gradiencie w kolorach salonu. */
-export function AwatarKolory({ nazwa, kolory, rozmiar = 36 }: { nazwa: string; kolory: [string, string]; rozmiar?: number }) {
+/** Awatar usługodawcy z danych API: logo salonu, a bez logo pierwsza litera nazwy na gradiencie w kolorach salonu. */
+export function AwatarKolory({ nazwa, kolory, rozmiar = 36, logoUrl }: { nazwa: string; kolory: [string, string]; rozmiar?: number; logoUrl?: string | null }) {
+  if (logoUrl) return <img className="awatar awatar-logo" src={logoUrl} alt="" width={rozmiar} height={rozmiar} loading="lazy" />;
   return (
     <span className="awatar" style={{ width: rozmiar, height: rozmiar, background: `linear-gradient(135deg, ${kolory[0]}, ${kolory[1]})` }} aria-hidden="true">
       {nazwa.replace(/^[^A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż]+/, "")[0] ?? "•"}

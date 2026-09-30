@@ -207,10 +207,24 @@ Zawsze podajemy uzasadnienie i możesz złożyć skargę.
 2. Nasza odpowiedzialność wobec Ciebie za szkody wynikłe z działania Aplikacji jest ograniczona do sumy prowizji zapłaconych przez Ciebie w ostatnich 12 miesiącach. Ograniczenie nie dotyczy szkód wyrządzonych umyślnie ani przypadków, w których prawo zakazuje ograniczenia odpowiedzialności. Nie dotyczy też Usługodawców, o których mowa w § 2 ust. 8, w zakresie, w jakim chronią ich przepisy.
 3. Odpowiadasz wobec Klientek za wykonanie usług. Jeśli ktoś zgłosi do nas roszczenie wynikające z Twojej usługi lub Twoich treści, współpracujesz z nami w jego wyjaśnieniu.
 
-## § 16. Treści i znaki
+## § 16. Treści, profil i narzędzia
 
 1. Nazwa i dane, które podajesz, pozostają Twoje. Pozwalasz nam pokazywać je w Aplikacji na czas trwania umowy, w zakresie potrzebnym do jej działania.
 2. Nie udzielamy Ci praw do znaku Wolne Okienko poza oznaczeniem, że przyjmujesz rezerwacje przez Aplikację, zgodnie z materiałami, które Ci przekażemy.
+3. **Zdjęcia, logo i opis profilu** dodajesz sam. Oświadczasz, że masz do nich prawa (jesteś autorem albo masz zgodę autora) i że osoby widoczne na zdjęciach zgodziły się na rozpowszechnianie swojego wizerunku. Nie dodajesz zdjęć Klientek bez ich zgody ani materiałów skopiowanych z cudzych serwisów bez zgody uprawnionego.
+4. Na czas trwania umowy udzielasz nam nieodpłatnej, niewyłącznej licencji na wyświetlanie tych materiałów w Aplikacji, w zakresie potrzebnym do jej działania, w tym na ich zmniejszanie i kadrowanie. Materiał usunięty przez Ciebie przestajemy pokazywać od razu.
+5. **Pracowników** wskazujesz samym imieniem albo pseudonimem, za wiedzą tych osób. Pokazujemy je Klientkom w Ofercie i w profilu. Jesteś administratorem tych danych i informujesz te osoby o przetwarzaniu (art. 13 RODO). My przetwarzamy je w Twoim imieniu, na zasadach z ust. 8.
+6. **Kalendarz**: możesz podłączyć swój kalendarz tajnym adresem w formacie iCal. Pobieramy go wyłącznie po to, żeby proponowane w Ofertach godziny omijały Twoje zajęte terminy. Zapisujemy tylko przedziały zajętości na najbliższe 8 dni. Tytułów, opisów i uczestników wydarzeń nie zapisujemy i nie pokazujemy. Adres przechowujemy zaszyfrowany. Kalendarz możesz odłączyć w każdej chwili.
+7. **Import danych z innych miejsc**: cennik możesz wczytać z tekstu, zdjęcia albo pliku (np. eksportu z innego systemu rezerwacji). Odczyt odbywa się na Twoim urządzeniu, a do Aplikacji trafiają tylko pozycje cennika i imiona pracowników, które zatwierdzisz. Nie importujemy danych klientów z innych systemów. Nie logujemy się do innych systemów w Twoim imieniu i nie prosimy o hasła do nich. Wzór wniosku o eksport danych od innego dostawcy przygotowujemy na podstawie przepisów, ale nie jest on poradą prawną.
+8. **Powierzenie przetwarzania** (art. 28 RODO) — dotyczy imion pracowników i danych z kalendarza, które przetwarzamy w Twoim imieniu:
+   - przetwarzamy je wyłącznie w celu wskazanym w ust. 5 i 6, na Twoje udokumentowane polecenie, którym jest korzystanie z tych funkcji;
+   - dostęp do nich mają tylko osoby upoważnione, zobowiązane do zachowania poufności;
+   - stosujemy środki bezpieczeństwa opisane w polityce prywatności;
+   - korzystamy z podmiotów przetwarzających: Neon, Inc. (baza danych) i Cloudflare, Inc. (hosting); o zmianie informujemy z wyprzedzeniem, a Ty możesz się sprzeciwić;
+   - pomagamy Ci w obsłudze żądań osób, których dane dotyczą, i w wypełnianiu obowiązków z art. 32–36 RODO;
+   - o naruszeniu ochrony tych danych informujemy Cię bez zbędnej zwłoki;
+   - po usunięciu danych przez Ciebie albo po zakończeniu umowy usuwamy je, chyba że prawo wymaga ich przechowywania;
+   - udostępniamy Ci informacje potrzebne do wykazania spełnienia tych obowiązków i umożliwiamy audyt.
 
 ## § 17. Dostęp do danych
 

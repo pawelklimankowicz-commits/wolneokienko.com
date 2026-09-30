@@ -75,6 +75,13 @@ Importy w `src/serwer/` względne (`../lib/…`), bo ładuje je też `vite.confi
   Endpointy: `POST /api/zapytania`, `GET /api/zapytania/:id`, `…/anuluj`,
   `POST /api/oferty/:id/przyjmij`, `GET /api/wizyty`, `…/odwolaj`, `…/potwierdz`,
   `GET /api/salon/zapytania`, `…/:id/oferta`, `…/:id/odmowa`, `GET /api/salon/wizyty`;
+- `profil.ts` — opis, logo i zdjęcia (base64 → `bytea`, typ po bajtach, bez SVG,
+  `GET /api/zdjecia/:id` publicznie z długim cache), pracownicy (samo imię),
+  profil publiczny `GET /api/salony/:id` (bez NIP-u i telefonu);
+- `kalendarz.ts` + `kalendarz-ics.ts` — kalendarz salonu z tajnego adresu iCal: lista
+  dozwolonych hostów (SSRF), adres szyfrowany AES-GCM (klucz z `KODY_SMS_PIEPRZ`
+  przez HKDF — zmiana sekretu = salony podłączają kalendarz ponownie), z pliku tylko
+  przedziały zajętości na 8 dni, odświeżanie co 10 min przy pobieraniu skrzynki;
 - `vite-api.ts` — to samo API pod `npm run dev` / `npm run preview`. Lokalnie
   domyślnie baza w pamięci (PGlite) i kody SMS wypisane w terminalu — nic nie
   kosztuje i nie dotyka produkcji. `DATABASE_URL_DEV` w `.env.local` → baza Neon,
@@ -92,6 +99,14 @@ wersja HTTP w `api-http.ts`). `npm run build:podglad` buduje wersję bez serwera
 do podglądu w przeglądarce. Ekrany na żywo: `Oferty.tsx` (odpytuje stan co 3 s),
 `Wizyty.tsx`, `SkrzynkaSalonu.tsx` (w panelu usługodawcy, co 5 s). Zakładka Okienka
 i start pokazują jeszcze przykładowe okienka; w aplikacji „Rezerwuję” otwiera zapytanie.
+
+Narzędzia usługodawcy: import cennika (`src/domain/import-cennika.ts` — rozpoznawanie
+i dopasowanie do katalogu, `src/lib/arkusz.ts` — CSV/XLSX bez bibliotek, `src/lib/ocr.ts`
+— Tesseract w przeglądarce), profil i zespół (`src/ekrany/PanelProfil.tsx`), wniosek
+o eksport danych (`src/domain/wniosek-eksport.ts`). Pliki OCR (program ok. 4 MB,
+polski słownik 2,6 MB) serwujemy sami z katalogu `ocr/` — kopiuje je z node_modules
+wtyczka w `vite.config.ts`. Nie logujemy się do cudzych systemów i nie importujemy
+danych klientów (docs/DECYZJE.md, § 12).
 
 Sekrety w `.env.local` (poza gitem): `DATABASE_URL`, `SMSAPI_TOKEN`,
 `KODY_SMS_PIEPRZ` (klucz HMAC kodów — zmiana unieważnia tylko kody w drodze),

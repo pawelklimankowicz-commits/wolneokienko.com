@@ -14,6 +14,14 @@ Dokument wewnętrzny. Stan na 1 października 2026 r. Administrator: [NAZWA SPÓ
 | 8 | DAC7 | Usługodawcy | dane identyfikacyjne, data urodzenia (JDG), liczba i wartość Wizyt, prowizje | informacja dla Szefa KAS | 6.1.c | Szef KAS | nie | 5 lat od końca roku złożenia informacji | procedura DAC7 |
 | 9 | Zgłoszenia DSA, reklamacje, skargi | wszyscy | treść zgłoszenia, dane kontaktowe, decyzje | obowiązki z DSA i prawa konsumenckiego | 6.1.c, 6.1.f | — | nie | 12 miesięcy po zamknięciu | — |
 | 10 | Korespondencja | wszyscy | e-mail, treść | odpowiedzi na pytania | 6.1.f | dostawca poczty [DO WYBORU] | zależnie od dostawcy | 12 miesięcy | — |
+| 11 | Profil Usługodawcy | Usługodawcy, osoby widoczne na zdjęciach | opis, logo, zdjęcia (wizerunek za zgodą, oświadczenie z datą) | prezentacja Usługodawcy przy Ofercie | 6.1.b | wszyscy użytkownicy (publiczny profil), Neon | j.w. | do usunięcia przez Usługodawcę albo końca umowy | zmniejszanie na urządzeniu usuwa EXIF/GPS; typ pliku sprawdzany po bajtach, bez SVG |
+
+### Jako podmiot przetwarzający (art. 30 ust. 2) — na zlecenie Usługodawców
+
+| # | Kategoria czynności | Administrator | Dane | Podprzetwarzający | Usunięcie | Zabezpieczenia |
+|---|---|---|---|---|---|---|
+| P1 | Lista pracowników | Usługodawca | imię albo pseudonim, usługi; imię w Ofercie | Neon, Cloudflare | po usunięciu z listy albo końcu umowy | tylko imię (minimalizacja), walidacja |
+| P2 | Zajętość z kalendarza | Usługodawca | przedziały zajętości na 8 dni; zaszyfrowany adres iCal | Neon, Cloudflare | przy odłączeniu kalendarza albo końcu umowy | AES-GCM na adres, treści wydarzeń odrzucane przy parsowaniu, lista dozwolonych hostów (SSRF) |
 
 ## Podmioty przetwarzające
 

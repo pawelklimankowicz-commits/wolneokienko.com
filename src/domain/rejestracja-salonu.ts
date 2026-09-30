@@ -13,6 +13,7 @@
 
 import { normalizujTelefon } from "../lib/telefon";
 import { BRANZE, KATALOG_USLUG, branzaUslugi, opisBranzy, type Branza } from "./katalog-uslug";
+import type { Pracownik, StanKalendarza } from "./profil-salonu";
 
 export interface DaneSalonu {
   nazwa: string;
@@ -52,6 +53,13 @@ export interface SalonKonta extends DaneSalonu {
   /** wizyty z aplikacji, które się odbyły — do promocji startowej */
   wizytyZrealizowane: number;
   cennik: PozycjaCennika[];
+  /** profil dla klientek: opis, logo, zdjęcia, pracownicy (src/domain/profil-salonu.ts) */
+  opis: string | null;
+  logoUrl: string | null;
+  zdjecia: { id: string; url: string }[];
+  pracownicy: Pracownik[];
+  /** podłączony kalendarz salonu — tylko stan, bez tajnego adresu */
+  kalendarz: StanKalendarza | null;
 }
 
 export type BledyDanych = Partial<Record<keyof DaneSalonu, string>>;

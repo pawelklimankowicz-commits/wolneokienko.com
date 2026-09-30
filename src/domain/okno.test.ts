@@ -1,5 +1,5 @@
 import { odlegloscKm } from "./odleglosc";
-import { oknoZapytania, proponowaneTerminy, terminCzytelny } from "./okno";
+import { kolidujeZ, oknoZapytania, proponowaneTerminy, terminCzytelny } from "./okno";
 
 // środa 1.10.2026, 14:07 czasu lokalnego testu
 const T = new Date(2026, 9, 1, 14, 7);
@@ -42,6 +42,15 @@ describe("proponowane terminy", () => {
   it("krótkie okno daje tyle terminów, ile się mieści", () => {
     const t = proponowaneTerminy({ od: new Date(2026, 9, 1, 16, 0), do: new Date(2026, 9, 1, 17, 30) }, T, 60);
     expect(t.map(g)).toEqual(["1.10 16:00", "1.10 16:15", "1.10 16:30"]);
+  });
+  it("pomija godziny, w których usługa wpadłaby na zajęty termin z kalendarza", () => {
+    const okno = { od: new Date(2026, 9, 1, 16, 0), do: new Date(2026, 9, 1, 19, 0) };
+    const zajete = [{ od: new Date(2026, 9, 1, 16, 30), do: new Date(2026, 9, 1, 17, 30) }];
+    const t = proponowaneTerminy(okno, T, 45, 20, zajete).map(g);
+    // 16:00 skończyłoby się 16:45 — koliduje; pierwsze wolne 17:30
+    expect(t).toEqual(["1.10 17:30", "1.10 17:45", "1.10 18:00", "1.10 18:15"]);
+    expect(kolidujeZ(zajete, new Date(2026, 9, 1, 15, 45), 45)).toBe(false);
+    expect(kolidujeZ(zajete, new Date(2026, 9, 1, 15, 50), 45)).toBe(true);
   });
   it("czytelny zapis terminu", () => {
     expect(terminCzytelny(new Date(2026, 9, 1, 16, 30), T)).toBe("dziś 16:30");

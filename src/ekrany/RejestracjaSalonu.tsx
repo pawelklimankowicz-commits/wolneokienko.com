@@ -19,9 +19,13 @@ import { cena, odmiana, zlote, zloteGr } from "@/lib/format";
 import { grupujNumer, telefonCzytelny } from "@/lib/telefon";
 import { Ikona, type NazwaIkony } from "@/ui/Ikona";
 import { NaglowekEkranu } from "@/ui/wspolne";
+import type { PozycjaZImportu, PracownikZImportu } from "@/domain/import-cennika";
+import { ImportCennika } from "./ImportCennika";
+import { KalendarzSalonu, PracownicySalonu, ProfilDlaKlientek } from "./PanelProfil";
 import { SkrzynkaSalonu } from "./SkrzynkaSalonu";
+import { WniosekEksport } from "./WniosekEksport";
 
-type Krok = "wstep" | "firma" | "cennik" | "panel";
+type Krok = "wstep" | "firma" | "cennik" | "import" | "wniosek" | "panel";
 
 const DZIEN_MS = 24 * 60 * 60 * 1000;
 const dataKrotka = new Intl.DateTimeFormat("pl-PL", { day: "numeric", month: "long" });
@@ -45,6 +49,8 @@ export function RejestracjaSalonu({
 }) {
   const [salon, setSalon] = useState<SalonKonta | null | undefined>(konto ? undefined : null);
   const [krok, setKrok] = useState<Krok>("wstep");
+  /** pozycje z importu czekające w edytorze cennika na zatwierdzenie */
+  const [zImportu, setZImportu] = useState<PozycjaZImportu[] | null>(null);
 
   useEffect(() => {
     if (!konto) return setSalon(null);
@@ -61,12 +67,27 @@ export function RejestracjaSalonu({
 
   const zacznij = () => (konto ? setKrok("firma") : onZaloguj(() => setKrok("firma")));
   const wstecz = () => {
+    if (krok === "import") return setKrok("cennik");
+    if (krok === "wniosek") return setKrok("panel");
     if (krok === "firma" && !salon) return setKrok("wstep");
     if ((krok === "firma" || krok === "cennik") && salon?.cennik.length) return setKrok("panel");
     onZamknij();
   };
 
-  const tytul = { wstep: "Dla usługodawców", firma: "Dane firmy", cennik: "Cennik", panel: "Twoja firma" }[krok];
+  const tytul = { wstep: "Dla usługodawców", firma: "Dane firmy", cennik: "Cennik", import: "Import cennika", wniosek: "Eksport danych", panel: "Twoja firma" }[krok];
+
+  const wstawZImportu = async (w: { pozycje: PozycjaZImportu[]; pracownicy: PracownikZImportu[] }) => {
+    if (salon && w.pracownicy.length) {
+      // zespół z pliku dochodzi do obecnego (imiona już na liście zostają bez zmian)
+      const obecni = new Set(salon.pracownicy.map((p) => p.imie.toLowerCase()));
+      const lista = [...salon.pracownicy, ...w.pracownicy.filter((p) => !obecni.has(p.imie.toLowerCase()))];
+      const z = await api.zapiszPracownikow(lista);
+      if (z.ok) setSalon(z.salon);
+      else onInfo(z.komunikat);
+    }
+    setZImportu(w.pozycje);
+    setKrok("cennik");
+  };
 
   return (
     <div className="nakladka">
@@ -97,12 +118,19 @@ export function RejestracjaSalonu({
         <EdytorCennika
           api={api}
           salon={salon}
+          zImportu={zImportu}
+          onImport={() => setKrok("import")}
           onZapisano={(s) => {
             setSalon(s);
+            setZImportu(null);
             setKrok("panel");
             onInfo("Cennik zapisany.");
           }}
         />
+      ) : krok === "import" && salon ? (
+        <ImportCennika branza={salon.branza} onWstaw={wstawZImportu} onAnuluj={() => setKrok("cennik")} />
+      ) : krok === "wniosek" && salon ? (
+        <WniosekEksport salon={salon} onImport={() => setKrok("import")} onInfo={onInfo} />
       ) : salon ? (
         <Panel api={api} salon={salon} onZmiana={setSalon} onEdytuj={setKrok} onDemo={onDemo} onInfo={onInfo} />
       ) : null}
@@ -357,20 +385,35 @@ interface StanPozycji {
   deklaracja: string;
 }
 
-function EdytorCennika({ api, salon, onZapisano }: { api: KlientApi; salon: SalonKonta; onZapisano: (s: SalonKonta) => void }) {
+function EdytorCennika({
+  api,
+  salon,
+  zImportu,
+  onImport,
+  onZapisano,
+}: {
+  api: KlientApi;
+  salon: SalonKonta;
+  /** pozycje z importu: zaznaczone z ceną i czasem, do sprawdzenia i zapisu */
+  zImportu: PozycjaZImportu[] | null;
+  onImport: () => void;
+  onZapisano: (s: SalonKonta) => void;
+}) {
   const uslugi = useMemo(() => uslugiBranzy(salon.branza), [salon.branza]);
   const [stan, setStan] = useState<Record<string, StanPozycji>>(() =>
     Object.fromEntries(
       uslugi.map((u) => {
-        const p = salon.cennik.find((c) => c.usluga === u.kod);
+        // import ma pierwszeństwo przed obecnym cennikiem; deklaracje zostają z obecnego
+        const obecna = salon.cennik.find((c) => c.usluga === u.kod);
+        const p = zImportu?.find((x) => x.uslugaKod === u.kod) ?? obecna;
         return [
           u.kod,
           {
             wybrana: !!p,
             cena: p ? String(p.cenaGr / 100).replace(".", ",") : "",
             czas: String(p?.czasMin ?? u.typowyCzasMin),
-            lekarz: !!p?.wykonujeLekarz,
-            deklaracja: p?.deklaracja ?? "",
+            lekarz: !!obecna?.wykonujeLekarz,
+            deklaracja: obecna?.deklaracja ?? "",
           },
         ];
       }),
@@ -431,6 +474,23 @@ function EdytorCennika({ api, salon, onZapisano }: { api: KlientApi; salon: Salo
             Zaznacz usługi i podaj cenę „od”. Dopasujemy do nich zapytania klientek — w ofercie i tak podasz dokładną cenę.
           </p>
         </div>
+        {zImportu ? (
+          <p className="promocja-info">
+            <Ikona nazwa="ok" rozmiar={18} />
+            <span>
+              Wstawiliśmy {zImportu.length} {odmiana(zImportu.length, "usługę", "usługi", "usług")} z importu. Sprawdź ceny i czasy, a potem zapisz cennik.
+            </span>
+          </p>
+        ) : (
+          <button type="button" className="przycisk-importu" onClick={onImport}>
+            <Ikona nazwa="plik" rozmiar={20} />
+            <span>
+              <strong>Masz już cennik gdzie indziej?</strong>
+              <small>Wklej tekst, zrób zdjęcie albo wczytaj plik z innego systemu — dopasujemy usługi za Ciebie.</small>
+            </span>
+            <Ikona nazwa="dalej" rozmiar={18} />
+          </button>
+        )}
         {medyczna && (
           <p className="info-medyczna">
             <Ikona nazwa="tarcza" rozmiar={18} />
@@ -588,7 +648,9 @@ function Panel({
         </p>
       )}
 
-      {salon.cennik.length > 0 && <SkrzynkaSalonu api={api} przyjmuje={salon.przyjmujeZapytania} onInfo={onInfo} />}
+      {salon.cennik.length > 0 && <SkrzynkaSalonu api={api} przyjmuje={salon.przyjmujeZapytania} pracownicy={salon.pracownicy} onInfo={onInfo} />}
+
+      <ProfilDlaKlientek api={api} salon={salon} onZmiana={onZmiana} onInfo={onInfo} />
 
       <section className="karta-panelu">
         <div className="karta-panelu-glowa">
@@ -631,6 +693,26 @@ function Panel({
             <dd>{salon.email}</dd>
           </div>
         </dl>
+      </section>
+
+      <PracownicySalonu key={JSON.stringify(salon.pracownicy)} api={api} salon={salon} onZmiana={onZmiana} onInfo={onInfo} />
+      <KalendarzSalonu api={api} salon={salon} onZmiana={onZmiana} onInfo={onInfo} />
+
+      <section className="karta-panelu">
+        <div className="karta-panelu-glowa">
+          <h3>Przenosisz się z innego systemu?</h3>
+        </div>
+        <p className="wyciszony maly">
+          Nie podawaj nam haseł do innych systemów. Dane Twojej firmy wydaje Ci obecny dostawca — przygotujemy wniosek, a plik wczytasz tutaj.
+        </p>
+        <div className="przyciski-rzad">
+          <button type="button" className="btn btn-maly btn-obrys" onClick={() => onEdytuj("import")}>
+            Importuj cennik
+          </button>
+          <button type="button" className="btn btn-maly btn-obrys" onClick={() => onEdytuj("wniosek")}>
+            Wniosek o eksport danych
+          </button>
+        </div>
       </section>
 
       <button type="button" className="link" onClick={onDemo}>

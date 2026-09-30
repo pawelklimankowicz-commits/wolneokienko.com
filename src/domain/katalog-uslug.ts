@@ -279,7 +279,7 @@ export const opisBranzy = (b: Branza): OpisBranzy => BRANZE.find((x) => x.id ===
 export const czyMedyczna = (usluga: Usluga): boolean => opisBranzy(branzaUslugi(usluga)).medyczna;
 export const uslugiBranzy = (b: Branza): Usluga[] => KATALOG_USLUG.filter((x) => branzaUslugi(x) === b);
 
-const normalizuj = (s: string) =>
+export const normalizuj = (s: string) =>
   s
     .toLowerCase()
     .normalize("NFD")

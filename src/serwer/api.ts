@@ -21,6 +21,14 @@
 //   GET  /api/wizyty                                         → wizyty klientki
 //   POST /api/wizyty/:id/odwolaj
 //   POST /api/wizyty/:id/potwierdz { odpowiedz }             → po terminie: byłam / nie byłam / salon odwołał
+//   POST /api/salon/opis         { opis }                    → opis salonu dla klientek
+//   POST /api/salon/zdjecia      { rodzaj, dane, oswiadczenie } → logo albo zdjęcie (base64, już zmniejszone)
+//   POST /api/salon/zdjecia/:id/usun
+//   POST /api/salon/pracownicy   { pracownicy }              → cała lista: imię + usługi
+//   POST /api/salon/kalendarz    { adres }                   → podłącz kalendarz (tajny adres iCal)
+//   POST /api/salon/kalendarz/odlacz
+//   GET  /api/salony/:id                                     → profil salonu dla klientki (publiczny)
+//   GET  /api/zdjecia/:id                                    → plik zdjęcia (publiczny)
 //
 // Sesja w ciasteczku HttpOnly (JavaScript strony go nie widzi). Ochrona przed
 // CSRF: POST przyjmuje tylko JSON — przeglądarka nie wyśle go z obcej strony
@@ -32,6 +40,8 @@ import { czas, type Baza } from "./baza";
 import type { BramkaSms } from "./bramka-sms";
 import type { Geokoder } from "./geokoder";
 import { sprawdzKod, wyslijKod, type Rola } from "./kody-sms";
+import { odlaczKalendarz, polaczKalendarz, zajetoscSalonu } from "./kalendarz";
+import { dodajZdjecie, plikZdjecia, profilPubliczny, usunZdjecie, zapiszOpis, zapiszPracownikow } from "./profil";
 import { mojSalon, ustawPrzyjmowanie, zapiszCennik, zapiszSalon } from "./salony";
 import { odmowZapytania, wizytySalonu, zapytaniaSalonu, zlozOferte } from "./skrzynka";
 import {
@@ -56,10 +66,14 @@ export interface ZaleznosciApi {
   /** false tylko lokalnie po http:// — przeglądarka nie zapisze ciasteczka Secure bez HTTPS */
   bezpieczneCiasteczka: boolean;
   teraz?: () => Date;
+  /** pobieranie kalendarzy salonów (testy podstawiają własne) */
+  fetch?: typeof fetch;
 }
 
 export const CIASTECZKO_SESJI = "wo_sesja";
 const MAKS_CIALO = 32 * 1024;
+/** zdjęcie do 600 kB w base64 (+⅓) z zapasem na JSON */
+const MAKS_CIALO_ZDJECIA = 850 * 1024;
 /** Role, które można założyć samemu. Operatora nadajemy ręcznie w bazie. */
 const ROLE_Z_APLIKACJI: Rola[] = ["klientka", "salon"];
 
@@ -79,9 +93,11 @@ function tokenZZadania(zadanie: Request): string | null {
   return null;
 }
 
-async function cialoJson(zadanie: Request): Promise<Record<string, unknown> | null> {
+async function cialoJson(zadanie: Request, maks = MAKS_CIALO): Promise<Record<string, unknown> | null> {
+  const dlugosc = Number(zadanie.headers.get("Content-Length") ?? 0);
+  if (dlugosc > maks) return null;
   const tekst = await zadanie.text();
-  if (tekst.length > MAKS_CIALO) return null;
+  if (tekst.length > maks) return null;
   try {
     const wartosc: unknown = JSON.parse(tekst);
     return wartosc && typeof wartosc === "object" && !Array.isArray(wartosc) ? (wartosc as Record<string, unknown>) : null;
@@ -212,6 +228,27 @@ export function utworzApi(z: ZaleznosciApi) {
       return json(200, { ok: true }, { "Set-Cookie": ciasteczko("", 0) });
     }
 
+    // ── Publiczne: profil salonu i zdjęcia (materiały, które salon sam opublikował) ──
+    const zdjecieId = trasa(pathname, "/api/zdjecia/:id");
+    if (zdjecieId && metoda === "GET") {
+      const plik = await plikZdjecia(z.baza, zdjecieId);
+      if (!plik) return json(404, { blad: "nie_ma" });
+      return new Response(plik.bajty, {
+        headers: {
+          "Content-Type": plik.typ,
+          // identyfikator zmienia się przy każdej wymianie zdjęcia
+          "Cache-Control": "public, max-age=31536000, immutable",
+          "X-Content-Type-Options": "nosniff",
+          "Content-Security-Policy": "default-src 'none'",
+        },
+      });
+    }
+    const profilId = trasa(pathname, "/api/salony/:id");
+    if (profilId && metoda === "GET") {
+      const profil = await profilPubliczny(z.baza, profilId);
+      return profil ? json(200, { salon: profil }) : json(404, { blad: "nie_ma" });
+    }
+
     if (pathname === "/api/salon" || pathname.startsWith("/api/salon/")) {
       const sesja = await zalogowany(zadanie);
       if (!sesja) return json(401, { blad: "niezalogowany" });
@@ -219,8 +256,8 @@ export function utworzApi(z: ZaleznosciApi) {
 
       if (pathname === "/api/salon" && metoda === "GET") return json(200, { salon: await mojSalon(z.baza, kontoId) });
 
-      const cialo = metoda === "POST" ? await cialoJson(zadanie) : null;
-      if (metoda === "POST" && !cialo) return json(400, { blad: "zly_format" });
+      const cialo = metoda === "POST" ? await cialoJson(zadanie, pathname === "/api/salon/zdjecia" ? MAKS_CIALO_ZDJECIA : MAKS_CIALO) : null;
+      if (metoda === "POST" && !cialo) return json(pathname === "/api/salon/zdjecia" ? 413 : 400, { blad: pathname === "/api/salon/zdjecia" ? "za_duzy" : "zly_format" });
 
       if (pathname === "/api/salon" && cialo) {
         const w = await zapiszSalon({
@@ -243,7 +280,8 @@ export function utworzApi(z: ZaleznosciApi) {
       }
       if (pathname === "/api/salon/zapytania" && metoda === "GET") {
         await zakonczPrzeterminowane(z.baza, teraz());
-        const lista = await zapytaniaSalonu({ baza: z.baza, kontoId, teraz: teraz() });
+        const zajete = await zajetoscSalonu({ baza: z.baza, kontoId, sekret: z.pieprz, fetch: z.fetch, teraz: teraz() });
+        const lista = await zapytaniaSalonu({ baza: z.baza, kontoId, teraz: teraz(), zajete });
         return lista ? json(200, { zapytania: lista }) : json(404, { blad: "brak_salonu" });
       }
       if (pathname === "/api/salon/wizyty" && metoda === "GET") {
@@ -252,12 +290,52 @@ export function utworzApi(z: ZaleznosciApi) {
       }
       const doOferty = trasa(pathname, "/api/salon/zapytania/:id/oferta");
       if (doOferty && cialo) {
-        const w = await zlozOferte({ baza: z.baza, kontoId, zapytanieId: doOferty, termin: napis(cialo.termin), cenaGr: liczba(cialo.cenaGr), teraz: teraz() });
+        const w = await zlozOferte({
+          baza: z.baza,
+          kontoId,
+          zapytanieId: doOferty,
+          termin: napis(cialo.termin),
+          cenaGr: liczba(cialo.cenaGr),
+          pracownik: typeof cialo.pracownik === "string" ? cialo.pracownik : null,
+          teraz: teraz(),
+        });
         return w.ok ? json(200, w) : json(w.blad === "nieaktualne" || w.blad === "brak_salonu" ? 409 : 400, { blad: w.blad });
       }
       const doOdmowy = trasa(pathname, "/api/salon/zapytania/:id/odmowa");
       if (doOdmowy && cialo) {
         return (await odmowZapytania({ baza: z.baza, kontoId, zapytanieId: doOdmowy, teraz: teraz() })) ? json(200, { ok: true }) : json(409, { blad: "nieaktualne" });
+      }
+      if (pathname === "/api/salon/opis" && cialo) {
+        const w = await zapiszOpis({ baza: z.baza, kontoId, opis: napis(cialo.opis) });
+        return w === "ok" ? json(200, { salon: await mojSalon(z.baza, kontoId) }) : json(w === "brak_salonu" ? 404 : 400, { blad: w });
+      }
+      if (pathname === "/api/salon/zdjecia" && cialo) {
+        const rodzaj = cialo.rodzaj === "logo" ? "logo" : "zdjecie";
+        const w = await dodajZdjecie({ baza: z.baza, kontoId, rodzaj, base64: napis(cialo.dane), oswiadczenie: cialo.oswiadczenie === true, teraz: teraz() });
+        return w.ok ? json(200, { salon: await mojSalon(z.baza, kontoId) }) : json(w.blad === "brak_salonu" ? 404 : 400, { blad: w.blad });
+      }
+      const doUsuniecia = trasa(pathname, "/api/salon/zdjecia/:id/usun");
+      if (doUsuniecia && cialo) {
+        await usunZdjecie({ baza: z.baza, kontoId, zdjecieId: doUsuniecia });
+        return json(200, { salon: await mojSalon(z.baza, kontoId) });
+      }
+      if (pathname === "/api/salon/pracownicy" && cialo) {
+        if (!Array.isArray(cialo.pracownicy) || cialo.pracownicy.length > 100) return json(400, { blad: "zly_format" });
+        const lista = cialo.pracownicy.map((p) => {
+          const o = (p && typeof p === "object" ? p : {}) as Record<string, unknown>;
+          return { imie: napis(o.imie), uslugi: Array.isArray(o.uslugi) ? o.uslugi.map(napis).slice(0, 200) : [] };
+        });
+        const w = await zapiszPracownikow({ baza: z.baza, kontoId, pracownicy: lista });
+        if (w.ok) return json(200, { salon: await mojSalon(z.baza, kontoId) });
+        return json(w.blad === "brak_salonu" ? 404 : 400, w.blad === "zle_dane" ? { blad: "zle_dane", komunikat: w.komunikat } : { blad: w.blad });
+      }
+      if (pathname === "/api/salon/kalendarz" && cialo) {
+        const w = await polaczKalendarz({ baza: z.baza, kontoId, adres: napis(cialo.adres), sekret: z.pieprz, fetch: z.fetch, teraz: teraz() });
+        return w.ok ? json(200, { salon: await mojSalon(z.baza, kontoId) }) : json(w.blad === "brak_salonu" ? 404 : 400, { blad: w.blad });
+      }
+      if (pathname === "/api/salon/kalendarz/odlacz" && cialo) {
+        await odlaczKalendarz({ baza: z.baza, kontoId });
+        return json(200, { salon: await mojSalon(z.baza, kontoId) });
       }
       if (pathname === "/api/salon/przyjmowanie" && cialo) {
         const w = await ustawPrzyjmowanie({ baza: z.baza, kontoId, wlaczone: cialo.wlaczone === true, teraz: teraz() });

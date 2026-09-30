@@ -32,6 +32,9 @@ export interface OfertaNaZywo {
   termin: string;
   cenaGr: number;
   kolory: [string, string];
+  /** u kogo będzie wizyta (imię z listy pracowników salonu) */
+  pracownik: string | null;
+  logoUrl: string | null;
 }
 
 export interface StanZapytania {
@@ -50,6 +53,7 @@ export type StatusWizyty = "potwierdzona" | "do_potwierdzenia" | "zakonczona" | 
 
 export interface WizytaWidok {
   id: string;
+  salonId: string;
   salonNazwa: string;
   adres: string;
   /** telefon salonu — widoczny dopiero po rezerwacji */
@@ -59,6 +63,14 @@ export interface WizytaWidok {
   cenaGr: number;
   kolory: [string, string];
   status: StatusWizyty;
+  pracownik: string | null;
+  logoUrl: string | null;
+}
+
+/** Przedział czasu (ISO 8601), np. zajętość z kalendarza salonu. */
+export interface Przedzial {
+  od: string;
+  do: string;
 }
 
 export interface ZapytanieDlaSalonu {
@@ -75,8 +87,10 @@ export interface ZapytanieDlaSalonu {
   /** cena „od” i czas z cennika salonu */
   mojaCenaGr: number | null;
   czasMin: number;
-  mojaOferta: { termin: string; cenaGr: number; status: "zlozona" | "potwierdzona" | "wygasla" | "odrzucona" | "wybrana" } | null;
+  mojaOferta: { termin: string; cenaGr: number; pracownik: string | null; status: "zlozona" | "potwierdzona" | "wygasla" | "odrzucona" | "wybrana" } | null;
   odmowa: boolean;
+  /** zajęte przedziały z kalendarza salonu w oknie klientki (gdy salon podłączył kalendarz) */
+  zajete: Przedzial[];
 }
 
 export interface WizytaSalonu {
@@ -86,4 +100,5 @@ export interface WizytaSalonu {
   cenaGr: number;
   telefonKlientki: string;
   status: StatusWizyty;
+  pracownik: string | null;
 }

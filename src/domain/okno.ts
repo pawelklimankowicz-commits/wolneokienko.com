@@ -43,12 +43,12 @@ export function oknoZapytania(kiedy: Kiedy, odGodziny: number | null, teraz: Dat
  * najwcześniej 20 minut od teraz (dojazd), tak żeby usługa zmieściła się
  * przed końcem okna. Najwyżej `ile` propozycji, rozłożonych po oknie.
  */
-export function proponowaneTerminy(okno: Okno, teraz: Date, czasUslugiMin: number, ile = 4): Date[] {
+export function proponowaneTerminy(okno: Okno, teraz: Date, czasUslugiMin: number, ile = 4, zajete: Okno[] = []): Date[] {
   const krok = 15 * MIN_MS;
   const start = Math.ceil(Math.max(okno.od.getTime(), teraz.getTime() + 20 * MIN_MS) / krok) * krok;
   const ostatni = okno.do.getTime() - Math.min(czasUslugiMin, 120) * MIN_MS;
   const wszystkie: number[] = [];
-  for (let t = start; t <= ostatni && wszystkie.length < 200; t += krok) wszystkie.push(t);
+  for (let t = start; t <= ostatni && wszystkie.length < 200; t += krok) if (!kolidujeZ(zajete, new Date(t), czasUslugiMin)) wszystkie.push(t);
   if (wszystkie.length <= ile) return wszystkie.map((t) => new Date(t));
   // pierwsze dwa jak najwcześniej, reszta rozłożona do końca okna
   const wybrane = new Set([wszystkie[0], wszystkie[1]]);
@@ -63,6 +63,12 @@ export function terminCzesci(termin: Date, teraz: Date): { dzien: string; godzin
   const roznica = Math.round((polnoc(termin) - polnoc(teraz)) / (24 * GODZINA_MS));
   const dzien = roznica === 0 ? "dziś" : roznica === 1 ? "jutro" : ["niedz.", "pon.", "wt.", "śr.", "czw.", "pt.", "sob."][termin.getDay()];
   return { dzien, godzina };
+}
+
+/** Czy wizyta od `termin` przez `czasMin` minut nachodzi na któryś z zajętych przedziałów. */
+export function kolidujeZ(zajete: Okno[], termin: Date, czasMin: number): boolean {
+  const koniec = termin.getTime() + czasMin * MIN_MS;
+  return zajete.some((p) => p.od.getTime() < koniec && termin.getTime() < p.do.getTime());
 }
 
 /** „dziś 16:30”, „jutro 9:15”, „sob. 11:00”. */

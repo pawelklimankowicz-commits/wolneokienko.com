@@ -164,3 +164,9 @@ Właściciel zatwierdził wszystkie propozycje z analizy. Katalog: 8 branż, 47 
 - Bez logowania się loginem salonu do cudzego systemu i bez automatycznego pobierania z niego danych (regulamin tych systemów, ryzyko blokady konta salonu).
 - Legalnie: import cennika z tekstu lub zdjęcia (salon zatwierdza dopasowanie do katalogu), wgrywanie własnych zdjęć, eksport danych na wniosek salonu (Data Act, rozporządzenie UE 2023/2854) i import pliku.
 - Listy klientek nie importujemy (RODO).
+- Zrobione (30.09.2026, na polecenie właściciela „zrób wszystkie narzędzia — legalnie”):
+  - import cennika z tekstu, zdjęcia (odczyt na urządzeniu, program OCR z naszego serwera, nie z CDN) i pliku CSV/XLSX; salon zatwierdza każdą pozycję, niepewne dopasowania nie są zaznaczane;
+  - opis, logo i do 6 zdjęć profilu z oświadczeniem o prawach i zgodach; zdjęcia zmniejszane na urządzeniu (bez EXIF/GPS);
+  - pracownicy: samo imię i usługi; w ofercie salon wybiera, kto wykona, klientka widzi imię (powierzenie w regulaminie, § 16);
+  - kalendarz salonu przez tajny adres iCal (Google, Outlook, iCloud): tylko przedziały zajętości, adres zaszyfrowany, propozycje godzin omijają zajęte terminy;
+  - generator wniosku o eksport danych do obecnego dostawcy (Data Act, art. 20 RODO dla JDG), bez wypowiadania umowy, jeśli salon nie zaznaczy.

@@ -6,6 +6,7 @@ import { PARAMETRY_FAL, zaplanujFale } from "../domain/fale";
 import { KATALOG_USLUG, czyMedyczna } from "../domain/katalog-uslug";
 import { blokadaDo } from "../domain/nieobecnosci";
 import { koloryDla } from "../domain/odleglosc";
+import { adresZdjecia } from "../domain/profil-salonu";
 import {
   WAZNOSC_OFERTY_PO_ZBIERANIU_MIN,
   type NoweZapytanie,
@@ -16,6 +17,9 @@ import {
   type WizytaWidok,
 } from "../domain/widoki";
 import { czas, type Baza } from "./baza";
+
+/** Najnowsze logo salonu `s` (podzapytanie do list ofert i wizyt). */
+const SQL_LOGO = `(select zs.id from public.zdjecia_salonow zs where zs.salon_id = s.id and zs.rodzaj = 'logo' order by zs.created_at desc limit 1)`;
 
 export const LIMITY_ZAPYTAN = {
   /** otwartych naraz — żeby nie blokować terminów wielu salonów jednocześnie */
@@ -181,8 +185,8 @@ export async function stanZapytania(opcje: { baza: Baza; kontoId: string; zapyta
     [zapytanieId, kontoId],
   );
   if (!z) return null;
-  const oferty = await baza<{ id: string; salon_id: string; nazwa: string; adres_z_mapy: string | null; miasto: string | null; km: string | null; termin: Date | string; cena_gr: number }>(
-    `select o.id, o.salon_id, s.nazwa, s.adres_z_mapy, s.miasto, r.odleglosc_km as km, o.termin, o.cena_gr
+  const oferty = await baza<WierszOferty>(
+    `select o.id, o.salon_id, s.nazwa, s.adres_z_mapy, s.miasto, r.odleglosc_km as km, o.termin, o.cena_gr, o.pracownik_imie, ${SQL_LOGO} as logo_id
      from public.oferty o
      join public.salony s on s.id = o.salon_id
      left join public.rozeslania r on r.zapytanie_id = o.zapytanie_id and r.salon_id = o.salon_id
@@ -201,7 +205,12 @@ export async function stanZapytania(opcje: { baza: Baza; kontoId: string; zapyta
   };
 }
 
-const ofertaWidok = (o: { id: string; salon_id: string; nazwa: string; adres_z_mapy: string | null; miasto: string | null; km: string | null; termin: Date | string; cena_gr: number }): OfertaNaZywo => ({
+interface WierszOferty {
+  id: string; salon_id: string; nazwa: string; adres_z_mapy: string | null; miasto: string | null; km: string | null; termin: Date | string; cena_gr: number;
+  pracownik_imie: string | null; logo_id: string | null;
+}
+
+const ofertaWidok = (o: WierszOferty): OfertaNaZywo => ({
   id: o.id,
   salonId: o.salon_id,
   salonNazwa: o.nazwa,
@@ -210,6 +219,8 @@ const ofertaWidok = (o: { id: string; salon_id: string; nazwa: string; adres_z_m
   termin: iso(o.termin),
   cenaGr: o.cena_gr,
   kolory: koloryDla(o.salon_id),
+  pracownik: o.pracownik_imie,
+  logoUrl: o.logo_id ? adresZdjecia(o.logo_id) : null,
 });
 
 export async function anulujZapytanie(opcje: { baza: Baza; kontoId: string; zapytanieId: string }): Promise<boolean> {
@@ -295,9 +306,10 @@ export async function wizytyKlientki(opcje: { baza: Baza; kontoId: string; teraz
   const teraz = opcje.teraz ?? new Date();
   const wiersze = await opcje.baza<{
     id: string; salon_id: string; nazwa: string; adres: string; telefon: string | null; usluga_kod: string; termin: Date | string; cena_gr: number;
-    wynik: string | null; potwierdzenie_klientki: string | null;
+    wynik: string | null; potwierdzenie_klientki: string | null; pracownik_imie: string | null; logo_id: string | null;
   }>(
-    `select r.id, s.id as salon_id, s.nazwa, s.adres, s.telefon, z.usluga_kod, r.termin, r.cena_gr, r.wynik, r.potwierdzenie_klientki
+    `select r.id, s.id as salon_id, s.nazwa, s.adres, s.telefon, z.usluga_kod, r.termin, r.cena_gr, r.wynik, r.potwierdzenie_klientki,
+       o.pracownik_imie, ${SQL_LOGO} as logo_id
      from public.rezerwacje r
      join public.salony s on s.id = r.salon_id
      join public.oferty o on o.id = r.oferta_id
@@ -309,6 +321,7 @@ export async function wizytyKlientki(opcje: { baza: Baza; kontoId: string; teraz
   );
   return wiersze.map((r) => ({
     id: r.id,
+    salonId: r.salon_id,
     salonNazwa: r.nazwa,
     adres: r.adres,
     telefon: r.telefon,
@@ -317,6 +330,8 @@ export async function wizytyKlientki(opcje: { baza: Baza; kontoId: string; teraz
     cenaGr: r.cena_gr,
     kolory: koloryDla(r.salon_id),
     status: statusWizyty(r, teraz),
+    pracownik: r.pracownik_imie,
+    logoUrl: r.logo_id ? adresZdjecia(r.logo_id) : null,
   }));
 }
 

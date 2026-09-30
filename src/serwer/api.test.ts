@@ -9,6 +9,8 @@ let api: ReturnType<typeof utworzApi>;
 const wyslane: string[] = [];
 const sms: BramkaSms = { wyslij: async (_t, tresc) => void wyslane.push(tresc.slice(0, 6)) };
 let zegar = new Date("2026-10-01T10:00:00Z");
+let kalendarzIcs = "";
+const pobraniaKalendarza: string[] = [];
 
 beforeAll(async () => {
   const t = await bazaTestowa();
@@ -20,6 +22,10 @@ beforeAll(async () => {
     pieprz: "p",
     bezpieczneCiasteczka: true,
     teraz: () => zegar,
+    fetch: (async (url: string) => {
+      pobraniaKalendarza.push(String(url));
+      return new Response(kalendarzIcs, { status: 200, headers: { "Content-Type": "text/calendar" } });
+    }) as typeof fetch,
   });
 }, 30_000);
 afterAll(() => pglite.close());
@@ -185,5 +191,104 @@ describe("API logowania", () => {
     expect((await (await get("/api/wizyty", { Cookie: klientkaC })).json()).wizyty).toHaveLength(1);
     expect((await (await get("/api/salon/wizyty", { Cookie: salonC })).json()).wizyty[0]).toMatchObject({ telefonKlientki: "+48600333222" });
     expect((await post(`/api/oferty/${stan.zapytanie.oferty[0].id}/przyjmij`, {}, { Cookie: klientkaC })).status).toBe(409);
+  });
+});
+
+describe("profil usługodawcy i narzędzia importu", () => {
+  // najmniejszy „JPEG”: nagłówek FF D8 FF i wypełnienie — serwer sprawdza rodzaj po bajtach
+  const jpeg = (rozmiar: number) => {
+    const b = new Uint8Array(rozmiar).fill(7);
+    b.set([0xff, 0xd8, 0xff, 0xe0]);
+    return b;
+  };
+  const b64 = (b: Uint8Array) => Buffer.from(b).toString("base64");
+
+  it("opis, logo, zdjęcia, pracownicy w ofercie, kalendarz — przez HTTP", async () => {
+    zegar = new Date("2026-10-06T08:00:00Z");
+    const zaloguj = async (telefon: string, rola: "klientka" | "salon") => {
+      await post("/api/logowanie/kod", { telefon });
+      const r = await post("/api/logowanie/sprawdz", { telefon, kod: wyslane.at(-1), rola, akceptujeRegulamin: true });
+      return `${CIASTECZKO_SESJI}=${tokenZ(r)}`;
+    };
+    const C = await zaloguj("600444111", "salon");
+    await post("/api/salon", { dane: { nazwa: "Pracownia Wilda", nip: "779-000-00-66", ulica: "Górna Wilda 5", kodPocztowy: "61-001", miasto: "Poznań", branza: "uroda", telefon: "600444111", email: "w@b.pl" }, akceptujeRegulamin: true }, { Cookie: C });
+    await post("/api/salon/cennik", { pozycje: [{ usluga: "manicure_hybrydowy", cenaGr: 11000, czasMin: 60 }, { usluga: "pedicure_hybrydowy", cenaGr: 14000, czasMin: 75 }] }, { Cookie: C });
+    await post("/api/salon/przyjmowanie", { wlaczone: true }, { Cookie: C });
+
+    // opis
+    expect((await post("/api/salon/opis", { opis: "x".repeat(601) }, { Cookie: C })).status).toBe(400);
+    const opis = await (await post("/api/salon/opis", { opis: "  Hybrydy i pedicure na Wildzie.\n\n\n\nParking za rogiem.  " }, { Cookie: C })).json();
+    expect(opis.salon.opis).toBe("Hybrydy i pedicure na Wildzie.\n\nParking za rogiem.");
+
+    // zdjęcia: bez oświadczenia nie, SVG nie, duży plik (≈ 500 kB) tak, logo zastępuje logo
+    expect(await (await post("/api/salon/zdjecia", { rodzaj: "zdjecie", dane: b64(jpeg(2000)), oswiadczenie: false }, { Cookie: C })).json()).toEqual({ blad: "brak_oswiadczenia" });
+    const svg = b64(new TextEncoder().encode(`<svg xmlns="http://www.w3.org/2000/svg">${" ".repeat(200)}<script>alert(1)</script></svg>`));
+    expect(await (await post("/api/salon/zdjecia", { rodzaj: "zdjecie", dane: svg, oswiadczenie: true }, { Cookie: C })).json()).toEqual({ blad: "zly_plik" });
+    const duze = await post("/api/salon/zdjecia", { rodzaj: "zdjecie", dane: b64(jpeg(500_000)), oswiadczenie: true }, { Cookie: C });
+    expect(duze.status).toBe(200);
+    expect((await post("/api/salon/zdjecia", { rodzaj: "zdjecie", dane: b64(jpeg(700_000)), oswiadczenie: true }, { Cookie: C })).status).toBe(413);
+    await post("/api/salon/zdjecia", { rodzaj: "logo", dane: b64(jpeg(300)), oswiadczenie: true }, { Cookie: C });
+    const poLogo = (await (await post("/api/salon/zdjecia", { rodzaj: "logo", dane: b64(jpeg(400)), oswiadczenie: true }, { Cookie: C })).json()).salon;
+    expect(poLogo.zdjecia).toHaveLength(1);
+    expect(poLogo.logoUrl).toMatch(/^\/api\/zdjecia\/[0-9a-f-]{36}$/);
+    const plik = await get(poLogo.logoUrl);
+    expect(plik.headers.get("Content-Type")).toBe("image/jpeg");
+    expect(plik.headers.get("Cache-Control")).toMatch(/immutable/);
+    expect((await plik.arrayBuffer()).byteLength).toBe(400);
+
+    // pracownicy: zła usługa i powtórzone imię odrzucone; potem lista zapisana
+    const zlaUsluga = await post("/api/salon/pracownicy", { pracownicy: [{ imie: "Ania", uslugi: ["wymiana_opon"] }] }, { Cookie: C });
+    expect(await zlaUsluga.json()).toMatchObject({ blad: "zle_dane", komunikat: expect.stringMatching(/spoza katalogu/) });
+    expect((await post("/api/salon/pracownicy", { pracownicy: [{ imie: "Ania", uslugi: [] }, { imie: "ania", uslugi: [] }] }, { Cookie: C })).status).toBe(400);
+    const zespol = await post("/api/salon/pracownicy", { pracownicy: [{ imie: "Ania", uslugi: ["manicure_hybrydowy"] }, { imie: "Ola", uslugi: ["pedicure_hybrydowy", "manicure_hybrydowy"] }] }, { Cookie: C });
+    expect((await zespol.json()).salon.pracownicy).toEqual([
+      { imie: "Ania", uslugi: ["manicure_hybrydowy"] },
+      { imie: "Ola", uslugi: ["manicure_hybrydowy", "pedicure_hybrydowy"] },
+    ]);
+
+    // kalendarz: zły host od razu odrzucony, Google podłączony; adres w bazie zaszyfrowany
+    expect(await (await post("/api/salon/kalendarz", { adres: "https://evil.example.com/cal.ics" }, { Cookie: C })).json()).toEqual({ blad: "niedozwolony_host" });
+    kalendarzIcs = [
+      "BEGIN:VCALENDAR", "BEGIN:VEVENT", "UID:1", "SUMMARY:Pani Kowalska — hybryda",
+      "DTSTART:20261006T110000Z", "DTEND:20261006T120000Z", "END:VEVENT", "END:VCALENDAR",
+    ].join("\r\n");
+    const adres = "https://calendar.google.com/calendar/ical/studio%40gmail.com/private-abc123/basic.ics";
+    const kal = await (await post("/api/salon/kalendarz", { adres }, { Cookie: C })).json();
+    expect(kal.salon.kalendarz).toMatchObject({ host: "calendar.google.com", zajeteBloki: 1, blad: null });
+    expect(JSON.stringify(kal)).not.toMatch(/private-abc123|Kowalska/);
+    const zapis = await pglite.query<{ adres_szyfr: string; zajete: unknown }>("select adres_szyfr, zajete from public.kalendarze_salonow");
+    expect(zapis.rows[0].adres_szyfr).not.toMatch(/google|abc123/);
+    expect(JSON.stringify(zapis.rows[0].zajete)).not.toMatch(/Kowalska/);
+
+    // zapytanie klientki: skrzynka pokazuje zajętość w oknie, oferta z imieniem pracownika
+    const K = await zaloguj("600444222", "klientka");
+    const { zapytanie } = await (
+      await post("/api/zapytania", { uslugaKod: "manicure_hybrydowy", oknoOd: "2026-10-06T10:00:00Z", oknoDo: "2026-10-06T16:00:00Z", lat: 52.395, lon: 16.93, limitGr: null, tryb: "zbieram", liczbaOsob: null, tresc: "", zgodaZdrowie: false }, { Cookie: K })
+    ).json();
+    const skrzynka = (await (await get("/api/salon/zapytania", { Cookie: C })).json()).zapytania.find((z: { id: string }) => z.id === zapytanie.id);
+    expect(skrzynka.zajete).toEqual([{ od: "2026-10-06T11:00:00.000Z", do: "2026-10-06T12:00:00.000Z" }]);
+    expect(await (await post(`/api/salon/zapytania/${zapytanie.id}/oferta`, { termin: "2026-10-06T13:00:00Z", cenaGr: 11000, pracownik: "Kasia" }, { Cookie: C })).json()).toEqual({ blad: "zly_pracownik" });
+    await post(`/api/salon/zapytania/${zapytanie.id}/oferta`, { termin: "2026-10-06T13:00:00Z", cenaGr: 11000, pracownik: "Ola" }, { Cookie: C });
+    const oferty = (await (await get(`/api/zapytania/${zapytanie.id}`, { Cookie: K })).json()).zapytanie.oferty;
+    const odOli = oferty.find((o: { salonNazwa: string }) => o.salonNazwa === "Pracownia Wilda");
+    expect(odOli).toMatchObject({ pracownik: "Ola", logoUrl: poLogo.logoUrl });
+    const wizyta = (await (await post(`/api/oferty/${odOli.id}/przyjmij`, {}, { Cookie: K })).json()).wizyta;
+    expect(wizyta).toMatchObject({ pracownik: "Ola", salonId: expect.any(String), logoUrl: poLogo.logoUrl });
+
+    // profil publiczny: opis, zdjęcia, pracownicy, cennik — bez NIP-u i telefonu
+    const profil = (await (await get(`/api/salony/${odOli.salonId}`)).json()).salon;
+    expect(profil).toMatchObject({ nazwa: "Pracownia Wilda", pracownicy: ["Ania", "Ola"], cennik: [{ uslugaKod: "manicure_hybrydowy", cenaGr: 11000 }, { uslugaKod: "pedicure_hybrydowy", cenaGr: 14000 }] });
+    expect(profil.zdjecia).toHaveLength(1);
+    expect(JSON.stringify(profil)).not.toMatch(/7790000066|600444111/);
+
+    // odświeżenie kalendarza najwyżej co 10 minut; odłączenie usuwa adres
+    const ile = pobraniaKalendarza.length;
+    await get("/api/salon/zapytania", { Cookie: C });
+    expect(pobraniaKalendarza.length).toBe(ile);
+    zegar = new Date("2026-10-06T08:11:00Z");
+    await get("/api/salon/zapytania", { Cookie: C });
+    expect(pobraniaKalendarza.length).toBe(ile + 1);
+    expect((await (await post("/api/salon/kalendarz/odlacz", {}, { Cookie: C })).json()).salon.kalendarz).toBeNull();
+    expect((await pglite.query("select 1 from public.kalendarze_salonow")).rows).toHaveLength(0);
   });
 });

@@ -17,6 +17,7 @@ import {
 } from "../domain/rejestracja-salonu";
 import { czas, type Baza } from "./baza";
 import type { Geokoder } from "./geokoder";
+import { profilKonta } from "./profil";
 
 export type WynikZapisuSalonu =
   | { ok: true; salon: SalonKonta }
@@ -62,7 +63,9 @@ export async function mojSalon(baza: Baza, kontoId: string): Promise<SalonKonta 
     "select usluga_kod, cena_gr, czas_min, wykonuje_lekarz, deklaracja_kwalifikacji from public.cennik where salon_id = $1 order by usluga_kod",
     [s.id],
   );
+  const profil = await profilKonta(baza, s.id);
   return {
+    ...profil,
     id: s.id,
     nazwa: s.nazwa,
     nip: s.nip,

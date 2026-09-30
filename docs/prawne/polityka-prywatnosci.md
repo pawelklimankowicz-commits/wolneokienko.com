@@ -108,14 +108,20 @@ Masz prawo:
    - dane firmy: nazwę, NIP, adres, telefon, e-mail do faktur;
    - numer w rejestrze (branża „Zdrowie”);
    - oświadczenia o osobach wykonujących zabiegi z toksyną botulinową i wypełniaczami, co może obejmować imię, nazwisko i numer prawa wykonywania zawodu tych osób;
-   - dane o Ofertach, Wizytach i rozliczeniach.
+   - dane o Ofertach, Wizytach i rozliczeniach;
+   - opis, logo i zdjęcia profilu (mogą przedstawiać wizerunek osób, na co Usługodawca ma ich zgodę);
+   - imiona albo pseudonimy pracowników i usługi, które wykonują. Te dane przetwarzamy w imieniu Usługodawcy (powierzenie, regulamin dla usługodawców, § 16);
+   - jeśli Usługodawca podłączy kalendarz: zaszyfrowany adres kalendarza i przedziały zajętości na najbliższe 8 dni. Treści wydarzeń (tytułów, opisów, uczestników) nie zapisujemy — przy pobieraniu kalendarza odrzucamy je od razu. Te dane także przetwarzamy w imieniu Usługodawcy.
 2. Cele i podstawy:
    - wykonanie umowy (art. 6 ust. 1 lit. b);
    - obowiązki podatkowe i rachunkowe, w tym faktury w KSeF i DAC7 (art. 6 ust. 1 lit. c);
    - bezpieczeństwo Klientek i weryfikacja uprawnień (art. 6 ust. 1 lit. f).
 3. Adres Usługodawcy przekazujemy serwisowi OpenStreetMap (OpenStreetMap Foundation, Wielka Brytania, państwo z decyzją Komisji Europejskiej stwierdzającą odpowiedni stopień ochrony), żeby zaznaczyć go na mapie.
 4. Dane rozliczeniowe przechowujemy 5 lat od końca roku podatkowego, dane DAC7 5 lat od końca roku, w którym złożyliśmy informację. Pozostałe dane przechowujemy do końca umowy i przedawnienia roszczeń.
-5. Osobom wskazanym w oświadczeniach Usługodawca przekazuje tę informację o przetwarzaniu ich danych.
+5. Osobom wskazanym w oświadczeniach i na liście pracowników Usługodawca przekazuje tę informację o przetwarzaniu ich danych.
+6. **Narzędzia importu cennika** działają w przeglądarce Usługodawcy: tekst, zdjęcie cennika i plik z eksportu z innego systemu odczytujemy na jego urządzeniu. Zdjęcie ani plik nie trafiają na nasz serwer — dostajemy tylko zatwierdzone pozycje cennika i imiona pracowników. Program do odczytu zdjęć pobiera się z naszego serwera.
+7. Zdjęcia przed wysłaniem zmniejszamy na urządzeniu, co usuwa z nich metadane, w tym położenie GPS. Zdjęcia, logo i opis przechowujemy do ich usunięcia przez Usługodawcę albo do końca umowy.
+8. Podłączony kalendarz pobiera nasz serwer bezpośrednio od dostawcy kalendarza wybranego przez Usługodawcę (Google, Microsoft albo Apple), najczęściej co 10 minut, gdy Usługodawca ma otwarty panel.
 
 ## 10. Przekazywanie danych poza Europejski Obszar Gospodarczy
 

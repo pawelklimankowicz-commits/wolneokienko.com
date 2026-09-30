@@ -3,7 +3,8 @@
 // i nadchodzące wizyty z telefonem klientki. Serwer: src/serwer/skrzynka.ts.
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { KATALOG_USLUG } from "@/domain/katalog-uslug";
-import { proponowaneTerminy, terminCzesci, terminCzytelny } from "@/domain/okno";
+import { kolidujeZ, proponowaneTerminy, terminCzesci, terminCzytelny } from "@/domain/okno";
+import type { Pracownik } from "@/domain/profil-salonu";
 import { zlotowkiNaGrosze } from "@/domain/rejestracja-salonu";
 import type { WizytaSalonu, ZapytanieDlaSalonu } from "@/domain/widoki";
 import type { KlientApi } from "@/lib/api";
@@ -24,19 +25,25 @@ function KartaZapytania({
   z,
   teraz,
   api,
+  pracownicy,
   onZmiana,
   onInfo,
 }: {
   z: ZapytanieDlaSalonu;
   teraz: number;
   api: KlientApi;
+  /** osoby z zespołu, które wykonują tę usługę */
+  pracownicy: string[];
   onZmiana: () => void;
   onInfo: (tekst: string) => void;
 }) {
   const [zajete, setZajete] = useState(false);
   const [inna, setInna] = useState(false);
+  const [kto, setKto] = useState<string | null>(pracownicy.length === 1 ? pracownicy[0] : null);
   const okno = { od: new Date(z.oknoOd), do: new Date(z.oknoDo) };
-  const terminy = proponowaneTerminy(okno, new Date(teraz), z.czasMin, 3);
+  // zajętość z kalendarza salonu: propozycje jednym dotknięciem ją omijają
+  const zKalendarza = z.zajete.map((p) => ({ od: new Date(p.od), do: new Date(p.do) }));
+  const terminy = proponowaneTerminy(okno, new Date(teraz), z.czasMin, 3, zKalendarza);
   const wszystkieTerminy = proponowaneTerminy(okno, new Date(teraz), z.czasMin, 40);
   const cenaGr = cenaOferty(z);
   const [innyTermin, setInnyTermin] = useState(() => wszystkieTerminy[0]?.toISOString() ?? "");
@@ -46,7 +53,7 @@ function KartaZapytania({
 
   const wyslij = async (termin: string, gr: number) => {
     setZajete(true);
-    const w = await api.zlozOferte(z.id, termin, gr);
+    const w = await api.zlozOferte(z.id, termin, gr, kto);
     setZajete(false);
     if (!w.ok) return onInfo(w.komunikat);
     onInfo(w.przyjeta ? "Klientka ma rezerwację u Ciebie — szczegóły w nadchodzących wizytach." : "Oferta wysłana. Damy znać, gdy klientka wybierze.");
@@ -79,9 +86,9 @@ function KartaZapytania({
     const tekst = !o
       ? "Pominięte — to nie obniża Twojego wskaźnika odpowiedzi."
       : o.status === "zlozona"
-        ? `Oferta wysłana: ${terminCzytelny(new Date(o.termin), terazData)} · ${cena(o.cenaGr)}. Czekamy na wybór klientki.`
+        ? `Oferta wysłana: ${terminCzytelny(new Date(o.termin), terazData)} · ${cena(o.cenaGr)}${o.pracownik ? ` · ${o.pracownik}` : ""}. Czekamy na wybór klientki.`
         : o.status === "potwierdzona"
-          ? `Klientka wybrała Twój termin: ${terminCzytelny(new Date(o.termin), terazData)} · ${cena(o.cenaGr)}.`
+          ? `Klientka wybrała Twój termin: ${terminCzytelny(new Date(o.termin), terazData)} · ${cena(o.cenaGr)}${o.pracownik ? ` · ${o.pracownik}` : ""}.`
           : "Klientka wybrała inną ofertę albo zrezygnowała.";
     return (
       <article className={`zapytanie-salonu wyslane ${o?.status === "potwierdzona" ? "wybrane" : ""}`}>
@@ -103,6 +110,20 @@ function KartaZapytania({
       <h2>{nazwaUslugi(z.uslugaKod)}</h2>
       <p className="wyciszony">{warunki.join(" · ")}</p>
       {z.tresc && <p className="tresc-klientki">„{z.tresc}”</p>}
+      {zKalendarza.length > 0 && (
+        <p className="wyciszony maly">
+          W kalendarzu masz wtedy zajęte: {zKalendarza.map((p) => `${godzina.format(p.od)}–${godzina.format(p.do)}`).join(", ")} — te godziny pomijamy.
+        </p>
+      )}
+      {pracownicy.length > 1 && (
+        <div className="chipy" role="group" aria-label="Kto wykona usługę">
+          {[null, ...pracownicy].map((p) => (
+            <button key={p ?? "ktokolwiek"} type="button" className={`chip chip-maly ${kto === p ? "chip-wybrany" : ""}`} aria-pressed={kto === p} onClick={() => setKto(p)}>
+              {p ?? "Ktokolwiek"}
+            </button>
+          ))}
+        </div>
+      )}
       <span className="licznik">
         <Ikona nazwa="zegar" rozmiar={14} />
         {zostaloSek > 0 ? (
@@ -138,6 +159,7 @@ function KartaZapytania({
               {wszystkieTerminy.map((t) => (
                 <option key={t.toISOString()} value={t.toISOString()}>
                   {terminCzytelny(t, terazData)}
+                  {kolidujeZ(zKalendarza, t, z.czasMin) ? " (zajęte w kalendarzu)" : ""}
                 </option>
               ))}
             </select>
@@ -157,6 +179,18 @@ function KartaZapytania({
         </form>
       )}
 
+      {cenaGr !== null && terminy.length === 0 && wszystkieTerminy.length > 0 && !inna && (
+        <div className="odpowiedzi">
+          <p className="wyciszony maly">W oknie klientki masz wszystko zajęte w kalendarzu.</p>
+          <button type="button" className="btn btn-duzy btn-obrys" disabled={zajete} onClick={() => setInna(true)}>
+            Mimo to podaj godzinę
+          </button>
+          <button type="button" className="btn btn-tekst" disabled={zajete} onClick={odmow}>
+            Nie mam czasu
+          </button>
+        </div>
+      )}
+
       {wszystkieTerminy.length === 0 && (
         <div className="odpowiedzi">
           <p className="wyciszony maly">Na tę usługę nie zmieścisz się już w oknie klientki.</p>
@@ -169,7 +203,17 @@ function KartaZapytania({
   );
 }
 
-export function SkrzynkaSalonu({ api, przyjmuje, onInfo }: { api: KlientApi; przyjmuje: boolean; onInfo: (tekst: string) => void }) {
+export function SkrzynkaSalonu({
+  api,
+  przyjmuje,
+  pracownicy,
+  onInfo,
+}: {
+  api: KlientApi;
+  przyjmuje: boolean;
+  pracownicy: Pracownik[];
+  onInfo: (tekst: string) => void;
+}) {
   const [zapytania, setZapytania] = useState<ZapytanieDlaSalonu[]>([]);
   const [wizyty, setWizyty] = useState<WizytaSalonu[]>([]);
   const [teraz, setTeraz] = useState(() => Date.now());
@@ -206,7 +250,15 @@ export function SkrzynkaSalonu({ api, przyjmuje, onInfo }: { api: KlientApi; prz
       <section className="skrzynka" aria-live="polite">
         <h3 className="maly-naglowek">Zapytania z okolicy</h3>
         {zapytania.map((z) => (
-          <KartaZapytania key={z.id} z={z} teraz={teraz} api={api} onZmiana={odswiez} onInfo={onInfo} />
+          <KartaZapytania
+            key={z.id}
+            z={z}
+            teraz={teraz}
+            api={api}
+            pracownicy={pracownicy.filter((p) => p.uslugi.includes(z.uslugaKod)).map((p) => p.imie)}
+            onZmiana={odswiez}
+            onInfo={onInfo}
+          />
         ))}
         {zapytania.length === 0 && (
           <p className="pusto-maly">
@@ -228,6 +280,7 @@ export function SkrzynkaSalonu({ api, przyjmuje, onInfo }: { api: KlientApi; prz
                 <span>
                   {terminCzesci(new Date(w.termin), new Date(teraz)).dzien}{" "}
                   <strong className="mono">{terminCzesci(new Date(w.termin), new Date(teraz)).godzina}</strong> · {nazwaUslugi(w.uslugaKod)}
+                  {w.pracownik ? ` · ${w.pracownik}` : ""}
                 </span>
                 <span className="wyciszony">
                   {cena(w.cenaGr)} · <a href={`tel:${w.telefonKlientki}`}>{telefonCzytelny(w.telefonKlientki)}</a>

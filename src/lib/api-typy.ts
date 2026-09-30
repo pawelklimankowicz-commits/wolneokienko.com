@@ -1,5 +1,6 @@
 // Wspólne typy klienta API i komunikaty błędów po polsku (dla wersji HTTP i podglądu).
 import type { BledyCennika, BledyDanych, DaneSalonu, PozycjaCennika, SalonKonta } from "../domain/rejestracja-salonu";
+import type { Pracownik, ProfilPubliczny } from "../domain/profil-salonu";
 import type { NoweZapytanie, StanZapytania, WizytaSalonu, WizytaWidok, ZapytanieDlaSalonu } from "../domain/widoki";
 import { odmiana } from "./format";
 
@@ -41,6 +42,16 @@ export interface KlientApi {
   zapiszSalon(dane: DaneSalonu, akceptujeRegulamin: boolean): Promise<Wynik<{ salon: SalonKonta }>>;
   zapiszCennik(pozycje: PozycjaCennika[]): Promise<Wynik<{ salon: SalonKonta }>>;
   ustawPrzyjmowanie(wlaczone: boolean): Promise<Wynik<{ salon: SalonKonta }>>;
+  // usługodawca: profil i narzędzia importu
+  zapiszOpis(opis: string): Promise<Wynik<{ salon: SalonKonta }>>;
+  /** `base64` — obraz już zmniejszony w przeglądarce (src/lib/obrazy.ts) */
+  dodajZdjecie(rodzaj: "logo" | "zdjecie", base64: string, oswiadczenie: boolean): Promise<Wynik<{ salon: SalonKonta }>>;
+  usunZdjecie(id: string): Promise<Wynik<{ salon: SalonKonta }>>;
+  zapiszPracownikow(lista: Pracownik[]): Promise<Wynik<{ salon: SalonKonta }>>;
+  polaczKalendarz(adres: string): Promise<Wynik<{ salon: SalonKonta }>>;
+  odlaczKalendarz(): Promise<Wynik<{ salon: SalonKonta }>>;
+  // klientka: profil salonu przy ofercie
+  profilSalonu(id: string): Promise<ProfilPubliczny | null>;
   // klientka: zapytania, oferty, wizyty
   wyslijZapytanie(dane: NoweZapytanie): Promise<Wynik<{ zapytanie: StanZapytania }>>;
   stanZapytania(id: string): Promise<StanZapytania | null>;
@@ -51,7 +62,7 @@ export interface KlientApi {
   potwierdzWizyte(id: string, odpowiedz: OdpowiedzPoWizycie): Promise<Wynik<object>>;
   // usługodawca: skrzynka
   skrzynkaSalonu(): Promise<ZapytanieDlaSalonu[]>;
-  zlozOferte(zapytanieId: string, termin: string, cenaGr: number): Promise<Wynik<{ przyjeta: boolean }>>;
+  zlozOferte(zapytanieId: string, termin: string, cenaGr: number, pracownik?: string | null): Promise<Wynik<{ przyjeta: boolean }>>;
   odmowZapytania(zapytanieId: string): Promise<Wynik<object>>;
   wizytySalonu(): Promise<WizytaSalonu[]>;
 }
@@ -66,6 +77,8 @@ export interface BladApi {
   pole?: string;
   /** blokada po nieobecnościach: do kiedy */
   doKiedy?: string;
+  /** gotowy komunikat serwera (np. lista pracowników) */
+  komunikat?: string;
 }
 
 /** 20 → „20 s”, 840 → „14 min”. */
@@ -86,6 +99,7 @@ export function komunikatBledu(b: BladApi): { komunikat: string; nowyKod?: boole
   switch (b.blad) {
     case "zle_dane":
       if (b.pole) return { komunikat: POLE_ZAPYTANIA[b.pole] ?? "Sprawdź zapytanie i spróbuj ponownie." };
+      if (b.komunikat) return { komunikat: b.komunikat };
       return { komunikat: b.cennik?.ogolny ?? "Popraw zaznaczone pola.", pola: b.pola, cennik: b.cennik };
     case "brak_akceptacji":
       return { komunikat: "Zaakceptuj regulamin, żeby przejść dalej." };
@@ -145,6 +159,27 @@ export function komunikatBledu(b: BladApi): { komunikat: string; nowyKod?: boole
       return { komunikat: "Podaj cenę od 1 do 10 000 zł." };
     case "powyzej_limitu":
       return { komunikat: "Cena przekracza limit, który podała klientka." };
+    case "zly_pracownik":
+      return { komunikat: "Tej osoby nie ma już na liście pracowników — odśwież panel." };
+    // profil i import
+    case "za_dlugi":
+      return { komunikat: "Opis może mieć najwyżej 600 znaków." };
+    case "brak_oswiadczenia":
+      return { komunikat: "Potwierdź, że masz prawa do zdjęcia i zgodę osób, które na nim widać." };
+    case "zly_plik":
+      return { komunikat: "To nie wygląda na zdjęcie. Wybierz plik JPG, PNG albo WebP." };
+    case "za_duzy":
+      return { komunikat: "Zdjęcie jest za duże nawet po zmniejszeniu. Wybierz inne." };
+    case "za_duzo_zdjec":
+      return { komunikat: "Możesz dodać najwyżej 6 zdjęć. Usuń któreś, żeby dodać nowe." };
+    case "zly_adres":
+      return { komunikat: "To nie wygląda na adres kalendarza. Skopiuj tajny adres w formacie iCal (zaczyna się od https:// albo webcal://)." };
+    case "niedozwolony_host":
+      return { komunikat: "Obsługujemy kalendarze Google, Outlook i iCloud. Wklej tajny adres iCal z jednego z nich." };
+    case "nie_odpowiada":
+      return { komunikat: "Kalendarz nie odpowiada. Sprawdź adres i spróbuj za chwilę." };
+    case "nie_kalendarz":
+      return { komunikat: "Pod tym adresem nie ma kalendarza w formacie iCal. Skopiuj adres z ustawień kalendarza jeszcze raz." };
     default:
       return { komunikat: "Coś poszło nie tak. Spróbuj ponownie." };
   }

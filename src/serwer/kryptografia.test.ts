@@ -1,4 +1,4 @@
-import { base64url, hmacSha256, losoweBajty, losowyKod, rowneStaloczasowo, sha256 } from "./kryptografia";
+import { bajtyZBase64, base64url, hmacSha256, losoweBajty, losowyKod, odszyfruj, rowneStaloczasowo, sha256, zaszyfruj } from "./kryptografia";
 
 describe("kryptografia", () => {
   it("kod ma zawsze tyle cyfr, ile trzeba, także z zerami na początku", () => {
@@ -25,5 +25,22 @@ describe("kryptografia", () => {
     expect(rowneStaloczasowo("abc", "abc")).toBe(true);
     expect(rowneStaloczasowo("abc", "abd")).toBe(false);
     expect(rowneStaloczasowo("abc", "abcd")).toBe(false);
+  });
+});
+
+describe("szyfrowanie krótkich sekretów", () => {
+  it("zaszyfrowane odczytuje tylko ten sam sekret i cel", async () => {
+    const adres = "https://calendar.google.com/calendar/ical/abc%40group/private-123/basic.ics";
+    const zapis = await zaszyfruj("pieprz", "kalendarz", adres);
+    expect(zapis).not.toContain("calendar");
+    expect(await odszyfruj("pieprz", "kalendarz", zapis)).toBe(adres);
+    expect(await odszyfruj("inny", "kalendarz", zapis)).toBeNull();
+    expect(await odszyfruj("pieprz", "inny-cel", zapis)).toBeNull();
+    expect(await odszyfruj("pieprz", "kalendarz", "zepsute")).toBeNull();
+  });
+
+  it("base64 → bajty tylko z poprawnego base64", () => {
+    expect(bajtyZBase64("AQID")).toEqual(new Uint8Array([1, 2, 3]));
+    expect(bajtyZBase64("nie base64!")).toBeNull();
   });
 });
