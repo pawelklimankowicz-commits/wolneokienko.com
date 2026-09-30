@@ -111,3 +111,16 @@ Na późniejsze fazy, gdy zadatek wróci (analiza z 30.09.2026):
 Przygotowuje Claude (bez zewnętrznego prawnika): regulaminy klientek i salonów (P2B),
 polityka prywatności, rejestr czynności i DPIA, zasady zadatku, moderacja (DSA, Omnibus),
 procedura DAC7, umowa z przedstawicielami.
+
+## 7. Rejestracja usługodawcy (30.09.2026)
+
+- Salon rejestruje się sam w aplikacji: dane firmy, NIP (suma kontrolna), adres
+  sprawdzony na mapie, cennik „od” z czasem usługi. Bez ręcznej weryfikacji przed
+  startem; operator może zablokować salon.
+- **Miesiąc próbny liczy się od pierwszego włączenia przyjmowania zapytań**, nie od
+  samej rejestracji. Salon, który zarejestruje się wcześniej, nie traci próby.
+- Gabinety medyczne podają numer w RPWDL albo numer prawa wykonywania zawodu.
+- Toksyna botulinowa tylko z oświadczeniem, że wykonuje lekarz. Wypełniacze tylko
+  z opisem, kto wykonuje zabieg i z jakimi kwalifikacjami.
+- Dane firmy nie są pobierane automatycznie z białej listy VAT: serwis Ministerstwa
+  Finansów blokuje zapytania z serwerów.

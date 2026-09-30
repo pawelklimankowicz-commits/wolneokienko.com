@@ -13,7 +13,14 @@ let zegar = new Date("2026-10-01T10:00:00Z");
 beforeAll(async () => {
   const t = await bazaTestowa();
   pglite = t.pglite;
-  api = utworzApi({ baza: t.baza, sms, pieprz: "p", bezpieczneCiasteczka: true, teraz: () => zegar });
+  api = utworzApi({
+    baza: t.baza,
+    sms,
+    geokoder: { znajdz: async (a) => ({ lat: 52.41, lon: 16.91, opis: `${a.ulica}, ${a.miasto}` }) },
+    pieprz: "p",
+    bezpieczneCiasteczka: true,
+    teraz: () => zegar,
+  });
 }, 30_000);
 afterAll(() => pglite.close());
 
@@ -36,11 +43,14 @@ describe("API logowania", () => {
     expect(kod.status).toBe(200);
     expect(await kod.json()).toMatchObject({ telefon: "+48600111222" });
 
-    const zly = await post("/api/logowanie/sprawdz", { telefon: "600111222", kod: wyslane.at(-1) === "000000" ? "111111" : "000000" });
+    const bezAkceptacji = await post("/api/logowanie/sprawdz", { telefon: "600111222", kod: wyslane.at(-1) });
+    expect(await bezAkceptacji.json()).toEqual({ blad: "brak_akceptacji" });
+
+    const zly = await post("/api/logowanie/sprawdz", { telefon: "600111222", kod: wyslane.at(-1) === "000000" ? "111111" : "000000", akceptujeRegulamin: true });
     expect(zly.status).toBe(400);
     expect(await zly.json()).toEqual({ blad: "zly_kod", pozostaloProb: 4 });
 
-    const ok = await post("/api/logowanie/sprawdz", { telefon: "600111222", kod: wyslane.at(-1) });
+    const ok = await post("/api/logowanie/sprawdz", { telefon: "600111222", kod: wyslane.at(-1), akceptujeRegulamin: true });
     expect(ok.status).toBe(200);
     const { konto, nowe } = await ok.json();
     expect(konto).toMatchObject({ rola: "klientka", telefon: "+48600111222" });
@@ -93,10 +103,42 @@ describe("API logowania", () => {
   });
 
   it("konta operatora nie da się założyć z aplikacji", async () => {
-    expect((await post("/api/logowanie/sprawdz", { telefon: "600111555", kod: "123456", rola: "operator" })).status).toBe(400);
+    expect(await (await post("/api/logowanie/sprawdz", { telefon: "600111555", kod: "123456", rola: "operator", akceptujeRegulamin: true })).json()).toEqual({
+      blad: "zla_rola",
+    });
   });
 
   it("nieznany adres to 404", async () => {
     expect((await get("/api/cokolwiek")).status).toBe(404);
+  });
+
+  it("usługodawca: logowanie jako salon, dane firmy, cennik, przyjmowanie zapytań", async () => {
+    zegar = new Date("2026-10-03T10:00:00Z");
+    expect((await get("/api/salon")).status).toBe(401);
+
+    await post("/api/logowanie/kod", { telefon: "600222333" });
+    const log = await post("/api/logowanie/sprawdz", { telefon: "600222333", kod: wyslane.at(-1), rola: "salon", akceptujeRegulamin: true });
+    expect((await log.json()).konto.rola).toBe("salon");
+    const Cookie = `${CIASTECZKO_SESJI}=${tokenZ(log)}`;
+    expect(await (await get("/api/salon", { Cookie })).json()).toEqual({ salon: null });
+
+    const dane = { nazwa: "Studio Jeżyce", nip: "526-025-09-95", ulica: "Dąbrowskiego 12", kodPocztowy: "60-838", miasto: "Poznań", branza: "uroda", telefon: "600222333", email: "a@b.pl" };
+    expect(await (await post("/api/salon", { dane }, { Cookie })).json()).toEqual({ blad: "brak_akceptacji" });
+    const zle = await post("/api/salon", { dane: { ...dane, nip: "1" }, akceptujeRegulamin: true }, { Cookie });
+    expect(await zle.json()).toMatchObject({ blad: "zle_dane", pola: { nip: expect.any(String) } });
+    const salon = await post("/api/salon", { dane, akceptujeRegulamin: true }, { Cookie });
+    expect(salon.status).toBe(200);
+    expect((await salon.json()).salon).toMatchObject({ nazwa: "Studio Jeżyce", nip: "5260250995", adresZMapy: "Dąbrowskiego 12, Poznań" });
+
+    expect((await post("/api/salon/przyjmowanie", { wlaczone: true }, { Cookie })).status).toBe(409);
+    const cennik = await post("/api/salon/cennik", { pozycje: [{ usluga: "manicure_hybrydowy", cenaGr: 13000, czasMin: 60 }] }, { Cookie });
+    expect((await cennik.json()).salon.cennik).toHaveLength(1);
+    const wl = await post("/api/salon/przyjmowanie", { wlaczone: true }, { Cookie });
+    expect((await wl.json()).salon).toMatchObject({ przyjmujeZapytania: true, aktywowanyAt: "2026-10-03T10:00:00.000Z" });
+
+    // cudzy salon jest niedostępny: inne konto widzi tylko swój (tu: brak)
+    await post("/api/logowanie/kod", { telefon: "600222444" });
+    const inne = await post("/api/logowanie/sprawdz", { telefon: "600222444", kod: wyslane.at(-1), akceptujeRegulamin: true });
+    expect(await (await get("/api/salon", { Cookie: `${CIASTECZKO_SESJI}=${tokenZ(inne)}` })).json()).toEqual({ salon: null });
   });
 });

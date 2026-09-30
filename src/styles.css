@@ -549,6 +549,76 @@ p { margin: 0; }
 .profil-akcje { margin: 16px 20px 0; display: flex; flex-direction: column; gap: 10px; }
 .menu-wyloguj { color: var(--lacquer-text); font-weight: 600; }
 
+/* ── Rejestracja usługodawcy ───────────────────────────────────────── */
+.lista-korzysci { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 16px; }
+.lista-korzysci li { display: grid; grid-template-columns: 44px 1fr; gap: 14px; align-items: start; }
+.lista-korzysci li > span:last-child { display: flex; flex-direction: column; gap: 2px; font-size: 14.5px; }
+.lista-korzysci strong { font-size: 16px; }
+.lista-korzysci-znak { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: var(--lacquer-soft); color: var(--lacquer); }
+.formularz { gap: 16px; }
+.pole { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.pole-etykieta { font-size: 14px; font-weight: 700; }
+.pole input, .pozycja-deklaracja-tekst textarea {
+  width: 100%; background: var(--surface); border: 1.5px solid var(--line-strong); border-radius: 14px;
+  padding: 13px 14px; font-size: 16px; outline: none; transition: border-color 0.15s; min-width: 0;
+}
+.pole input:focus, .pozycja-deklaracja-tekst textarea:focus { border-color: var(--lacquer); }
+.pole.z-bledem input { border-color: var(--lacquer); }
+.pole .blad-pola { margin-top: 0; font-size: 13.5px; }
+.pole-podpowiedz { font-size: 13px; color: var(--muted); }
+.pola-rzad { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 12px; }
+.zgoda-regulamin { display: grid; grid-template-columns: 22px 1fr; gap: 10px; font-size: 14px; color: var(--ink); cursor: pointer; }
+.zgoda-regulamin input { width: 20px; height: 20px; margin: 1px 0 0; accent-color: var(--lacquer); }
+.branza:disabled { opacity: 0.45; cursor: not-allowed; }
+.lista-uslug { display: flex; flex-direction: column; gap: 8px; }
+.pozycja { background: var(--surface); border: 1.5px solid var(--line); border-radius: 16px; padding: 4px 14px; display: flex; flex-direction: column; }
+.pozycja.wybrana { border-color: var(--lacquer); padding-bottom: 12px; }
+.pozycja.z-bledem { border-color: var(--lacquer); background: var(--lacquer-soft); }
+.pozycja-glowa { display: flex; align-items: center; gap: 12px; padding: 10px 0; font-weight: 600; cursor: pointer; }
+.pozycja-glowa input, .pozycja-deklaracja input { width: 20px; height: 20px; margin: 0; accent-color: var(--lacquer); flex: none; }
+.pozycja-pola { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.pozycja-pola label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); font-weight: 600; min-width: 0; }
+.pole-z-jednostka {
+  display: flex; align-items: center; gap: 6px; background: var(--bg); border: 1.5px solid var(--line-strong);
+  border-radius: 12px; padding: 0 12px; color: var(--muted); font-weight: 600;
+}
+.pole-z-jednostka:focus-within { border-color: var(--lacquer); }
+.pole-z-jednostka input { flex: 1; width: 100%; min-width: 0; border: 0; outline: none; background: none; padding: 10px 0; font-size: 17px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.pozycja-deklaracja { display: grid; grid-template-columns: 20px 1fr; gap: 10px; margin-top: 10px; font-size: 13.5px; cursor: pointer; }
+.pozycja-deklaracja-tekst { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; font-size: 13.5px; font-weight: 600; }
+.pozycja-deklaracja-tekst textarea { resize: vertical; font-size: 15px; padding: 10px 12px; }
+.pozycja .blad-pola { margin-top: 8px; }
+.karta-panelu { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.karta-panelu-glowa { display: flex; justify-content: space-between; align-items: center; }
+.karta-panelu h3 { font-size: 17px; }
+.cennik-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.cennik-lista li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 14.5px; }
+.cennik-lista li span:last-child { white-space: nowrap; }
+.dane-firmy { margin: 0; display: flex; flex-direction: column; }
+.dane-firmy div { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 14.5px; }
+.dane-firmy dt { color: var(--muted); }
+.dane-firmy dd { margin: 0; font-weight: 600; text-align: right; overflow-wrap: anywhere; }
+.przelacznik:disabled { opacity: 0.7; }
+
+/* ── Dokumenty prawne ──────────────────────────────────────────────── */
+.nakladka-dokumentu { z-index: 20; }
+.dokument { gap: 14px; }
+.dokument-tresc { font-size: 15px; line-height: 1.6; overflow-wrap: anywhere; }
+.dokument-tresc h1 { font-size: 26px; font-weight: 800; margin: 4px 0 6px; }
+.dokument-tresc h2 { font-size: 19px; font-weight: 800; margin: 26px 0 8px; }
+.dokument-tresc h3 { font-size: 16px; font-weight: 700; margin: 18px 0 6px; font-family: var(--f-body); }
+.dokument-tresc p { margin: 0 0 10px; }
+.dokument-tresc ul, .dokument-tresc ol { margin: 0 0 12px; padding-left: 22px; display: flex; flex-direction: column; gap: 4px; }
+.dokument-tresc a { color: var(--lacquer-text); font-weight: 600; }
+.dokument-tresc blockquote { margin: 0 0 12px; padding: 10px 14px; background: var(--sunk); border-radius: 12px; color: var(--ink); }
+.dokument-tresc hr { border: 0; border-top: 1px solid var(--line); margin: 20px 0; }
+.tabela-przewijana { overflow-x: auto; margin: 0 0 14px; border: 1px solid var(--line); border-radius: 12px; }
+.dokument-tresc table { border-collapse: collapse; font-size: 13.5px; min-width: 100%; }
+.dokument-tresc th, .dokument-tresc td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.dokument-tresc th { background: var(--sunk); font-weight: 700; }
+.dokument-tresc tr:last-child td { border-bottom: 0; }
+.stopka-prawna .link { font-size: inherit; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }

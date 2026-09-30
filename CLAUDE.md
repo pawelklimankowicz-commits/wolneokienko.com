@@ -54,6 +54,11 @@ Importy w `src/serwer/` względne (`../lib/…`), bo ładuje je też `vite.confi
 - `sesje.ts` — token 32 bajty, w bazie SHA-256, 90 dni od ostatniego użycia;
 - `bramka-sms.ts` — SMSAPI (konto Prometheusa; błędy przychodzą jako HTTP 200
   z polem `error`; konto odrzuca SMS-y z linkiem, także z samą domeną);
+- `salony.ts` — rejestracja usługodawcy: dane firmy (adres → punkt na mapie przez
+  `geokoder.ts`, OpenStreetMap), cennik zapisywany w całości jednym poleceniem,
+  przyjmowanie zapytań. Reguły pól i cennika: `src/domain/rejestracja-salonu.ts`
+  (te same sprawdza formularz). Endpointy `GET/POST /api/salon`,
+  `POST /api/salon/cennik`, `POST /api/salon/przyjmowanie`;
 - `vite-api.ts` — to samo API pod `npm run dev` / `npm run preview`. Lokalnie
   domyślnie baza w pamięci (PGlite) i kody SMS wypisane w terminalu — nic nie
   kosztuje i nie dotyka produkcji. `DATABASE_URL_DEV` w `.env.local` → baza Neon,
@@ -61,6 +66,9 @@ Importy w `src/serwer/` względne (`../lib/…`), bo ładuje je też `vite.confi
 
 Przy hostingu na Cloudflare: adapter wywołuje `utworzApi({…, bezpieczneCiasteczka: true})`
 i przekazuje adres z nagłówka `CF-Connecting-IP`.
+
+Dokumenty prawne dla użytkowników: `docs/prawne/*.md` (wyświetla je `src/ekrany/Dokument.tsx`;
+wersje w `src/domain/dokumenty.ts`). Dokumenty wewnętrzne: `docs/prawne/wewnetrzne/`.
 
 Aplikacja rozmawia z API przez `src/lib/api.ts`. `npm run build:podglad` buduje
 wersję bez serwera (logowanie w pamięci, kod 123456) do podglądu w przeglądarce.

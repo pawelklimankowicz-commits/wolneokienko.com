@@ -5,15 +5,18 @@
 // potwierdzamy dopiero wtedy, gdy klientka wysyła zapytanie albo rezerwuje.
 import { useCallback, useEffect, useState } from "react";
 import { salon, type Oferta, type Okienko } from "./dane/przyklad";
+import { Dokument } from "./ekrany/Dokument";
 import { Logowanie } from "./ekrany/Logowanie";
 import { Okienka } from "./ekrany/Okienka";
 import { Oferty } from "./ekrany/Oferty";
 import { Potwierdzenie, type Rezerwacja } from "./ekrany/Potwierdzenie";
 import { Profil } from "./ekrany/Profil";
+import { RejestracjaSalonu } from "./ekrany/RejestracjaSalonu";
 import { Salon } from "./ekrany/Salon";
 import { Start } from "./ekrany/Start";
 import { Wizyty } from "./ekrany/Wizyty";
 import { Zapytanie, type WyslaneZapytanie } from "./ekrany/Zapytanie";
+import type { NazwaDokumentu } from "./domain/dokumenty";
 import type { Branza } from "./domain/katalog-uslug";
 import { api, type Konto } from "./lib/api";
 import { Ikona, type NazwaIkony } from "./ui/Ikona";
@@ -24,6 +27,7 @@ type Nakladka =
   | { typ: "oferty"; zapytanie: WyslaneZapytanie }
   | { typ: "potwierdzenie"; rezerwacja: Rezerwacja }
   | { typ: "salon" }
+  | { typ: "rejestracja" }
   | null;
 
 const ZAKLADKI: { id: Zakladka; etykieta: string; ikona: NazwaIkony }[] = [
@@ -42,7 +46,9 @@ export default function App() {
   /** undefined — jeszcze sprawdzamy sesję */
   const [konto, setKonto] = useState<Konto | null | undefined>(undefined);
   /** logowanie leży nad bieżącym ekranem, więc zamknięcie nie gubi wpisanego zapytania */
-  const [logowanie, setLogowanie] = useState<{ powod?: string; potem: () => void } | null>(null);
+  const [logowanie, setLogowanie] = useState<{ powod?: string; rola?: "klientka" | "salon"; potem: () => void } | null>(null);
+  /** dokument prawny leży nad wszystkim, także nad logowaniem */
+  const [dokument, setDokument] = useState<NazwaDokumentu | null>(null);
 
   useEffect(() => {
     let aktualne = true;
@@ -110,7 +116,8 @@ export default function App() {
               setKonto(null);
               setToast("Wylogowano.");
             }}
-            onSalon={() => setNakladka({ typ: "salon" })}
+            onSalon={() => setNakladka({ typ: "rejestracja" })}
+            onDokumenty={() => setDokument("regulamin-klientki")}
             onInfo={setToast}
           />
         )}
@@ -154,11 +161,24 @@ export default function App() {
           }}
         />
       )}
-      {nakladka?.typ === "salon" && <Salon onWyjdz={() => setNakladka(null)} />}
+      {nakladka?.typ === "salon" && <Salon onWyjdz={() => setNakladka({ typ: "rejestracja" })} />}
+      {nakladka?.typ === "rejestracja" && (
+        <RejestracjaSalonu
+          api={api}
+          konto={konto ?? null}
+          onZaloguj={(potem) => setLogowanie({ rola: "salon", powod: "Zaloguj się numerem, którego używasz w firmie.", potem })}
+          onDemo={() => setNakladka({ typ: "salon" })}
+          onDokument={setDokument}
+          onZamknij={() => setNakladka(null)}
+          onInfo={setToast}
+        />
+      )}
       {logowanie && (
         <Logowanie
           api={api}
           powod={logowanie.powod}
+          rola={logowanie.rola}
+          onDokument={setDokument}
           onZamknij={() => setLogowanie(null)}
           onZalogowano={(k) => {
             setKonto(k);
@@ -167,6 +187,7 @@ export default function App() {
           }}
         />
       )}
+      {dokument && <Dokument nazwa={dokument} onZamknij={() => setDokument(null)} />}
 
       {toast && (
         <div className="toast" role="status">

@@ -5,6 +5,8 @@ const zlGr = new Intl.NumberFormat("pl-PL", { minimumFractionDigits: 2, maximumF
 export const zlote = (gr: number) => `${zl.format(gr / 100)} zł`;
 /** 39216 → „392,16 zł”. */
 export const zloteGr = (gr: number) => `${zlGr.format(gr / 100)} zł`;
+/** Cena z cennika: 13000 → „130 zł”, 15050 → „150,50 zł” (grosze tylko, gdy są). */
+export const cena = (gr: number) => (gr % 100 === 0 ? zlote(gr) : zloteGr(gr));
 /** 1.2 → „1,2 km”. */
 export const km = (x: number) => `${x.toLocaleString("pl-PL", { maximumFractionDigits: 1 })} km`;
 /** 4.9 → „4,9”. */

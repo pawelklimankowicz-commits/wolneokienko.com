@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import type { NazwaDokumentu } from "@/domain/dokumenty";
 import type { KlientApi, Konto } from "@/lib/api";
 import { czasCzekania } from "@/lib/api";
 import { grupujNumer, telefonCzytelny } from "@/lib/telefon";
@@ -15,10 +16,15 @@ const ODSTEP_SEK = 30;
 export function Logowanie({
   api,
   powod,
+  rola = "klientka",
   onZalogowano,
+  onDokument,
   onZamknij,
 }: {
   api: KlientApi;
+  /** rola nowego konta; istniejącemu kontu rola się nie zmienia */
+  rola?: "klientka" | "salon";
+  onDokument: (d: NazwaDokumentu) => void;
   /** dlaczego prosimy o logowanie, np. „Potwierdź numer — potem od razu wyślemy zapytanie.” */
   powod?: string;
   onZalogowano: (konto: Konto) => void;
@@ -66,7 +72,7 @@ export function Logowanie({
     if (czekam || wpisany.length !== 6) return;
     setCzekam(true);
     setBlad(null);
-    const w = await api.zaloguj(telefon, wpisany);
+    const w = await api.zaloguj(telefon, wpisany, rola);
     setCzekam(false);
     if (w.ok) return onZalogowano(w.konto);
     setBlad(w.komunikat);
@@ -209,7 +215,17 @@ export function Logowanie({
         <button type="submit" form="formularz-logowania" className="btn btn-duzy" disabled={!przyciskAktywny}>
           {etykietaPrzycisku}
         </button>
-        <p className="maly wyciszony srodek">Numer służy do logowania i do kontaktu w sprawie Twoich wizyt.</p>
+        <p className="maly wyciszony srodek stopka-prawna">
+          Logując się, akceptujesz{" "}
+          <button type="button" className="link link-w-tekscie" onClick={() => onDokument("regulamin-klientki")}>
+            regulamin
+          </button>{" "}
+          i{" "}
+          <button type="button" className="link link-w-tekscie" onClick={() => onDokument("polityka-prywatnosci")}>
+            zasady prywatności
+          </button>
+          .
+        </p>
       </footer>
     </div>
   );

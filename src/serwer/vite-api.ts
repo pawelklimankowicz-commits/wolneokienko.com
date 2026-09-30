@@ -10,6 +10,7 @@ import { loadEnv, type Connect, type Plugin } from "vite";
 import { utworzApi } from "./api";
 import { bazaNeon, type Baza } from "./baza";
 import { bramkaSmsapi, type BramkaSms } from "./bramka-sms";
+import { geokoderNominatim } from "./geokoder";
 
 async function zaleznosci(env: Record<string, string>) {
   let baza: Baza;
@@ -26,7 +27,7 @@ async function zaleznosci(env: Record<string, string>) {
   console.log(
     `  API Wolnego Okienka: baza ${env.DATABASE_URL_DEV ? "Neon (DATABASE_URL_DEV)" : "w pamięci"}, SMS ${env.SMS_PRAWDZIWE === "1" ? "prawdziwe" : "w terminalu"}`,
   );
-  return utworzApi({ baza, sms, pieprz: env.KODY_SMS_PIEPRZ || "pieprz-lokalny", bezpieczneCiasteczka: false });
+  return utworzApi({ baza, sms, geokoder: geokoderNominatim(), pieprz: env.KODY_SMS_PIEPRZ || "pieprz-lokalny", bezpieczneCiasteczka: false });
 }
 
 async function naRequest(req: IncomingMessage): Promise<Request> {

@@ -24,7 +24,6 @@ describe("migracje", () => {
 
     // zadatek nie może przekroczyć ceny wizyty — pilnuje tego też baza
     await db.exec(`
-      insert into public.uslugi (kod, nazwa, kategoria, branza, typowy_czas_min) values ('manicure_hybrydowy', 'Manicure hybrydowy', 'paznokcie', 'uroda', 60);
       insert into public.klientki (id) values ('${uid}');
     `);
     const zap = await db.query<{ id: string }>(

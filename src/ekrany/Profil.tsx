@@ -6,7 +6,6 @@ const MENU: { etykieta: string; ikona: NazwaIkony }[] = [
   { etykieta: "Twoje dane", ikona: "profil" },
   { etykieta: "Ulubione salony", ikona: "serce" },
   { etykieta: "Powiadomienia", ikona: "dzwonek" },
-  { etykieta: "Regulamin i prywatność", ikona: "tarcza" },
 ];
 
 export function Profil({
@@ -14,12 +13,14 @@ export function Profil({
   onZaloguj,
   onWyloguj,
   onSalon,
+  onDokumenty,
   onInfo,
 }: {
   konto: Konto | null;
   onZaloguj: () => void;
   onWyloguj: () => void;
   onSalon: () => void;
+  onDokumenty: () => void;
   onInfo: (tekst: string) => void;
 }) {
   return (
@@ -72,11 +73,16 @@ export function Profil({
             <Ikona nazwa="dalej" rozmiar={18} className="menu-strzalka" />
           </button>
         ))}
+        <button type="button" onClick={onDokumenty}>
+          <Ikona nazwa="tarcza" />
+          <span>Regulamin i prywatność</span>
+          <Ikona nazwa="dalej" rozmiar={18} className="menu-strzalka" />
+        </button>
         <button type="button" className="menu-salon" onClick={onSalon}>
           <Ikona nazwa="salon" />
           <span>
-            Masz salon?
-            <small>Zobacz aplikację dla salonów</small>
+            {konto?.rola === "salon" ? "Twoja firma" : "Masz salon albo gabinet?"}
+            <small>{konto?.rola === "salon" ? "Cennik, dane i przyjmowanie zapytań" : "Dołącz — bez abonamentu"}</small>
           </span>
           <Ikona nazwa="dalej" rozmiar={18} className="menu-strzalka" />
         </button>
