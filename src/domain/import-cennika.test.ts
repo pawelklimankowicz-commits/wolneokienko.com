@@ -116,6 +116,9 @@ describe("dopasowanie do katalogu", () => {
     expect(kod("Rzęsy 1:1")).toBe("rzesy_1_1");
     expect(kod("Koloryzacja włosów")).toBe("koloryzacja");
     expect(kod("Voucher prezentowy")).toBeNull();
+    // pełna nazwa z katalogu wygrywa z synonimem innej usługi
+    expect(kod("Zdjęcie hybrydy")).toBe("zdjecie_hybrydy");
+    expect(kod("Manicure")).toBe("manicure_klasyczny");
   });
 
   it("pewne tylko przy wyraźnym trafieniu", () => {
@@ -134,6 +137,17 @@ describe("dopasowanie do katalogu", () => {
     // sam nagłówek sekcji nie wystarcza
     const [bon] = dopasuj([{ zrodlo: "", nazwa: "Bon podarunkowy", cenaGr: 10000, czasMin: null, pracownicy: [], sekcja: "Paznokcie" }], "uroda");
     expect(bon.uslugaKod).toBeNull();
+  });
+
+  it("cennik z tekstu: tanie usługi dodatkowe nie zaniżają ceny głównej", () => {
+    const { pozycje } = pozycjeZImportu(
+      dopasuj(wierszeZTekstu("CENNIK\nManicure hybrydowy ..... 120 zł\nPedicure hybrydowy 1g 15min 150 zł\nZdjęcie hybrydy 30 zł\nVoucher 100 zł"), "uroda").filter((p) => p.pewne),
+    );
+    expect(pozycje).toEqual([
+      { uslugaKod: "manicure_hybrydowy", cenaGr: 12000, czasMin: 60 },
+      { uslugaKod: "pedicure_hybrydowy", cenaGr: 15000, czasMin: 75 },
+      { uslugaKod: "zdjecie_hybrydy", cenaGr: 3000, czasMin: 20 },
+    ]);
   });
 
   it("kilka wierszy tej samej usługi → jedna pozycja z najniższą ceną, pracownicy z usługami", () => {

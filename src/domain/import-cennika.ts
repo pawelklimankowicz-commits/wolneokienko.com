@@ -245,9 +245,10 @@ function toSamoSlowo(a: string, b: string): boolean {
 
 /**
  * Najlepsza usługa z podanej listy dla nazwy z cennika. Liczy się, ile słów nazwy
- * z katalogu jest w tekście (z polskimi końcówkami), plus synonimy spoza nazwy wpisane
- * w całości („hybryda”, „2D”). Pewne: pokryte co najmniej 60% nazwy albo synonim od
- * 4 liter. Salon i tak zatwierdza każdą pozycję.
+ * z katalogu jest w tekście (z polskimi końcówkami) albo synonim spoza nazwy wpisany
+ * w całości („hybryda”, „2D”) — co większe, a drugie tylko w połowie, żeby synonim
+ * „hybrydy” nie wygrał z pełną nazwą „Zdjęcie hybrydy”. Pewne: pokryte co najmniej
+ * 60% nazwy albo synonim od 4 liter. Salon i tak zatwierdza każdą pozycję.
  */
 export function dopasujUsluge(nazwa: string, dozwolone: Usluga[]): { usluga: Usluga; pewne: boolean } | null {
   const tekst = slowa(nazwa);
@@ -267,7 +268,7 @@ export function dopasujUsluge(nazwa: string, dozwolone: Usluga[]): { usluga: Usl
         if (sl.join(" ").length >= 4) pewnySynonim = true;
       }
     }
-    const wynik = pokryte + synonimy;
+    const wynik = Math.max(pokryte, synonimy) + Math.min(pokryte, synonimy) / 2;
     if (wynik >= 5 && (!najlepsza || wynik > najlepsza.wynik)) najlepsza = { usluga: u, wynik, pewne: pokryte / calosc >= 0.6 || pewnySynonim };
   }
   return najlepsza ? { usluga: najlepsza.usluga, pewne: najlepsza.pewne } : null;
