@@ -10,20 +10,46 @@
 -- fakturę salonu. Kolumny zadatku zostają na późniejsze fazy (domyślnie 0).
 --
 -- Kwoty w groszach (integer). Czas w timestamptz. Lokalizacja w PostGIS
--- (geography, WGS84) — zapytania „salony w promieniu X km”.
+-- (geography, WGS84) — zapytania „wykonawcy w promieniu X km”.
 --
--- RLS włączone na wszystkich tabelach bez polityk = dostęp tylko dla
--- service_role (funkcje brzegowe). Polityki dla aplikacji klientki i salonu
--- dochodzą w osobnej migracji razem z ekranami.
+-- Baza: Neon (Postgres + PostGIS, Frankfurt), wykonywana przez
+-- scripts/neon-api.mjs. Konta i logowanie SMS-em są nasze (tabela KONTA),
+-- bez zależności od dostawcy uwierzytelniania.
+--
+-- RLS włączone na wszystkich tabelach bez polityk: dostęp tylko przez API
+-- aplikacji, działające jako właściciel bazy.
 -- =====================================================================
 
--- PostGIS w schemacie `extensions` (zalecenie Supabase: bez tabel rozszerzenia w `public`).
+-- PostGIS w osobnym schemacie, żeby tabele rozszerzenia nie mieszały się z naszymi.
+create schema if not exists extensions;
 create extension if not exists postgis with schema extensions;
+
+-- ── Konta (klientki, usługodawcy, operatorzy) ───────────────────────
+create table public.konta (
+  id uuid primary key default gen_random_uuid(),
+  telefon text not null unique check (telefon ~ '^\+[0-9]{9,15}$'),
+  rola text not null check (rola in ('klientka', 'salon', 'operator')),
+  telefon_zweryfikowany_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+-- Jednorazowe kody SMS do logowania (przechowujemy tylko skrót kodu).
+create table public.kody_sms (
+  id uuid primary key default gen_random_uuid(),
+  telefon text not null,
+  kod_skrot text not null,
+  wygasa_at timestamptz not null,
+  proby smallint not null default 0 check (proby between 0 and 5),
+  uzyty_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create index kody_sms_telefon on public.kody_sms (telefon, created_at desc);
 
 -- ── Salony ──────────────────────────────────────────────────────────
 create table public.salony (
   id uuid primary key default gen_random_uuid(),
-  wlasciciel_id uuid not null references auth.users (id) on delete restrict,
+  wlasciciel_id uuid not null references public.konta (id) on delete restrict,
   nazwa text not null,
   nip text not null unique check (nip ~ '^[0-9]{10}$'),
   adres text not null,
@@ -68,7 +94,7 @@ create table public.cennik (
 
 -- ── Klientki ────────────────────────────────────────────────────────
 create table public.klientki (
-  id uuid primary key references auth.users (id) on delete cascade,
+  id uuid primary key references public.konta (id) on delete cascade,
   imie text,
   telefon text,
   telefon_zweryfikowany_at timestamptz,
@@ -176,6 +202,8 @@ create table public.oceny (
 );
 
 -- ── RLS: domyślnie zamknięte ────────────────────────────────────────
+alter table public.konta enable row level security;
+alter table public.kody_sms enable row level security;
 alter table public.salony enable row level security;
 alter table public.uslugi enable row level security;
 alter table public.cennik enable row level security;

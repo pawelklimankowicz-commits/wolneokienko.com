@@ -1,7 +1,7 @@
 // =====================================================================
 // PRZYKŁADOWE DANE do podglądu wyglądu aplikacji.
 // Wszystkie miejsca są fikcyjne; w aplikacji nad danymi wisi etykieta
-// „przykładowe dane”. Po podłączeniu Supabase ten plik zastąpią zapytania
+// „przykładowe dane”. Po podłączeniu bazy (Neon) ten plik zastąpią zapytania
 // do bazy.
 // =====================================================================
 

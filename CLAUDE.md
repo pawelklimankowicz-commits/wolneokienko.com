@@ -9,8 +9,17 @@ albo katalogu usług.
 
 ## Stos
 
-React + Vite + TypeScript, Supabase (Postgres z PostGIS, Realtime, funkcje brzegowe),
-docelowo Capacitor dla iOS i Androida. Domena: wolneokienko.com.
+React + Vite + TypeScript. Baza: **Neon** (Postgres + PostGIS, Frankfurt) — wybrana dla
+niskich kosztów. Docelowo Cloudflare (hosting, funkcje API, pliki) i Capacitor dla iOS
+i Androida. Domena: wolneokienko.com.
+
+Baza z terminala (klucz `NEON_API_KEY` w `.env.local`, poza gitem):
+
+```bash
+npm run db:utworz    # projekt „wolne-okienko” we Frankfurcie, zapisuje DATABASE_URL
+npm run db:migrate   # wykonuje nowe pliki z baza/migrations
+npm run db:status
+```
 
 ## Logika domenowa
 

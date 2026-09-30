@@ -5,7 +5,7 @@ export default defineConfig({
   test: {
     environment: "node",
     globals: true,
-    include: ["src/**/*.test.ts", "supabase/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "baza/**/*.test.ts", "scripts/**/*.test.ts"],
   },
   resolve: { alias: { "@": path.resolve(__dirname, "./src") } },
 });

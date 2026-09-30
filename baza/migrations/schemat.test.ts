@@ -1,7 +1,6 @@
 // Sprawdza, że migracje wykonują się na czystym Postgresie (PGlite, w procesie).
-// PGlite nie ma PostGIS ani schematu `auth` z Supabase, więc test:
-//  • podstawia minimalny `auth.users`,
-//  • pomija `create extension postgis`, a `extensions.geography(point, 4326)` zamienia na `text`
+// PGlite nie ma PostGIS, więc test pomija `create extension postgis`,
+// a `extensions.geography(point, 4326)` zamienia na `text`
 //    i indeks GiST na zwykły.
 // Reszta SQL (typy, klucze, CHECK-i, RLS) wykonuje się bez zmian.
 import { PGlite } from "@electric-sql/pglite";
@@ -20,10 +19,6 @@ function dlaPglite(sql: string): string {
 describe("migracje", () => {
   it("wykonują się po kolei na czystej bazie i pilnują kluczowych reguł", async () => {
     const db = new PGlite();
-    await db.exec(`
-      create schema auth;
-      create table auth.users (id uuid primary key default gen_random_uuid());
-    `);
 
     const pliki = readdirSync(katalog).filter((f) => f.endsWith(".sql")).sort();
     expect(pliki.length).toBeGreaterThan(0);
@@ -31,7 +26,9 @@ describe("migracje", () => {
       await db.exec(dlaPglite(readFileSync(path.join(katalog, plik), "utf8")));
     }
 
-    const { rows } = await db.query<{ id: string }>("insert into auth.users default values returning id");
+    // telefon w formacie międzynarodowym
+    await expect(db.query("insert into public.konta (telefon, rola) values ('600123123', 'klientka')")).rejects.toThrow();
+    const { rows } = await db.query<{ id: string }>("insert into public.konta (telefon, rola) values ('+48600123123', 'klientka') returning id");
     const uid = rows[0].id;
 
     // NIP musi mieć 10 cyfr

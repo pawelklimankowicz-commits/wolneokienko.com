@@ -54,6 +54,13 @@ weszły do aplikacji od razu.
   z 30.09.2026). W regulaminie dla gabinetów prowizja jest opisana jako opłata za obsługę
   rezerwacji terminu przez platformę.
 
+## 3a. Infrastruktura — niskie koszty
+
+**Decyzja z 30.09.2026:** baza w **Neon** (Postgres + PostGIS, Frankfurt), zamiast Supabase.
+Na start darmowy plan; płatność według zużycia dopiero przy wzroście. Hosting, funkcje API
+i pliki — Cloudflare, gdy przyjdzie czas na hosting. Logowanie SMS-em własne (SMSAPI),
+oferty na żywo na start przez odświeżanie co kilka sekund.
+
 ## 4. Zadatek — NIE w fazie 1
 
 **Decyzja z 30.09.2026: w pierwszych fazach nie pobieramy zadatku**, żeby nie
