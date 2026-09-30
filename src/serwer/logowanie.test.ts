@@ -31,12 +31,12 @@ beforeAll(async () => {
 afterAll(() => pglite.close());
 
 describe("kod SMS", () => {
-  it("treść mieści się w jednym SMS-ie bez polskich znaków i kończy się linią WebOTP", () => {
+  it("treść mieści się w jednym SMS-ie bez polskich znaków i nie ma linku (SMSAPI by ją odrzuciło)", () => {
     const tresc = trescSms("012345");
     expect(tresc.length).toBeLessThanOrEqual(160);
-    expect(tresc).toMatch(/^[\x20-\x7E\n]+$/);
+    expect(tresc).toMatch(/^[\x20-\x7E]+$/);
     expect(tresc.startsWith("012345 ")).toBe(true);
-    expect(tresc.split("\n").at(-1)).toBe("@wolneokienko.com #012345");
+    expect(tresc).not.toMatch(/https?:|www\.|\.(com|pl|app)\b/i);
   });
 
   it("wysyła kod, a poprawny kod zakłada konto klientki", async () => {

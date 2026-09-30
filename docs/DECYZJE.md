@@ -61,6 +61,14 @@ Na start darmowy plan; płatność według zużycia dopiero przy wzroście. Host
 i pliki — Cloudflare, gdy przyjdzie czas na hosting. Logowanie SMS-em własne (SMSAPI),
 oferty na żywo na start przez odświeżanie co kilka sekund.
 
+**SMS-y — decyzja z 30.09.2026:**
+- Wysyłka z **konta SMSAPI Prometheusa**. Saldo punktów jest wspólne z powiadomieniami
+  Prometheusa — właściciel potwierdził.
+- Nazwa nadawcy: **WolneOkno** (limit SMSAPI to 11 znaków, „WolneOkienko” ma 12).
+  Zgłoszona w SMSAPI 30.09.2026, czeka na zatwierdzenie. Do tego czasu SMS-y wychodzą
+  z nazwą domyślną konta („Prometheus”).
+- Konto odrzuca SMS-y z linkiem, także z samą domeną, więc kody idą bez adresu strony.
+
 ## 4. Zadatek — NIE w fazie 1
 
 **Decyzja z 30.09.2026: w pierwszych fazach nie pobieramy zadatku**, żeby nie

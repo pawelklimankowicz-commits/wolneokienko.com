@@ -45,7 +45,7 @@ produkcji `bazaNeon`, w testach `bazaTestowa()` — PGlite z prawdziwymi migracj
   najnowszy kod; limity 30 s / 3 na 15 min / 10 na dobę; w bazie tylko HMAC kodu;
 - `sesje.ts` — token 32 bajty, w bazie SHA-256, 90 dni od ostatniego użycia;
 - `bramka-sms.ts` — SMSAPI (konto Prometheusa; błędy przychodzą jako HTTP 200
-  z polem `error`);
+  z polem `error`; konto odrzuca SMS-y z linkiem, także z samą domeną);
 - `telefon.ts` — tylko polskie numery, zapis `+48XXXXXXXXX`.
 
 Sekrety w `.env.local` (poza gitem): `DATABASE_URL`, `SMSAPI_TOKEN`,

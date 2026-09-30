@@ -45,11 +45,13 @@ export const skrotKodu = (pieprz: string, telefon: string, kod: string) => hmacS
 
 /**
  * Treść SMS-a bez polskich znaków — mieści się w jednej wiadomości (160 znaków
- * GSM-7 zamiast 70 w Unicode). Ostatnia linia to format WebOTP: Chrome na
- * Androidzie sam podpowiada kod na stronie wolneokienko.com.
+ * GSM-7 zamiast 70 w Unicode). Kod na początku, żeby był widoczny w powiadomieniu.
+ * Bez adresu strony: SMSAPI na tym koncie odrzuca wiadomości z linkami
+ * („Not allowed to send messages with link”), a domena liczy się jako link —
+ * dlatego odpada też linia WebOTP „@wolneokienko.com #kod”.
  */
 export function trescSms(kod: string): string {
-  return `${kod} to Twoj kod do Wolnego Okienka. Wazny 5 min. Nie podawaj go nikomu.\n\n@wolneokienko.com #${kod}`;
+  return `${kod} to Twoj kod do Wolnego Okienka. Wazny 5 min. Nie podawaj go nikomu.`;
 }
 
 /**
