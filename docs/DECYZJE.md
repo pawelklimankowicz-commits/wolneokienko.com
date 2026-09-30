@@ -14,7 +14,9 @@ https://claude.ai/artifact/SMFywkP4VAqLcTv8F2WEqa
 
 - **20% + VAT od każdej wizyty** przyjętej przez aplikację. Wypełniamy wolne terminy,
   a nie prowadzimy całego kalendarza jak Booksy.
-- Bez abonamentu, bez umowy terminowej.
+- **Wszystkie branże płacą prowizję, łącznie ze zdrowiem. Nikt nie płaci abonamentu**
+  (decyzja z 30.09.2026).
+- Bez umowy terminowej.
 - Promocja startowa: **miesiąc próbny, w którym 5 pierwszych klientek jest bez prowizji**.
   Darmowe wizyty nie przechodzą na czas po miesiącu próbnym.
 - Prowizja idzie na **miesięczną fakturę salonu** (KSeF), bo w fazie 1 nie pobieramy
@@ -48,9 +50,9 @@ weszły do aplikacji od razu.
 - Zapytanie o wizytę medyczną to informacja o zdrowiu (art. 9 RODO): wysłanie wymaga
   zaznaczenia wyraźnej zgody, a klient podaje rodzaj wizyty, nie objawy
   (`zapytania.zgoda_dane_zdrowotne_at`).
-- **Otwarte:** model rozliczeń z gabinetami. Rekomendacja: abonament zamiast prowizji od
-  pacjenta (prowizja za „przyprowadzenie” pacjenta może być sprzeczna z etyką zawodową
-  lekarzy). Do czasu decyzji kod liczy prowizję jak w innych branżach.
+- Rozliczenia: prowizja 20% + VAT jak w innych branżach, bez abonamentu (decyzja
+  z 30.09.2026). W regulaminie dla gabinetów prowizja jest opisana jako opłata za obsługę
+  rezerwacji terminu przez platformę.
 
 ## 4. Zadatek — NIE w fazie 1
 

@@ -4,6 +4,7 @@
 // DECYZJA WŁAŚCICIELA (30.09.2026): 20% + VAT od KAŻDEJ wizyty z aplikacji,
 // nie tylko od pierwszej. Uzasadnienie: wypełniamy wolne terminy, a nie
 // prowadzimy salonowi całego kalendarza jak Booksy (abonament + Boost).
+// Dotyczy wszystkich branż, także zdrowia; nikt nie płaci abonamentu.
 //
 // Promocja startowa: miesiąc próbny, w którym 5 pierwszych klientek jest
 // bez prowizji. Darmowe wizyty nie przechodzą na czas po miesiącu próbnym
