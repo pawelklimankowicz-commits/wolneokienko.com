@@ -1,0 +1,33 @@
+:root {
+  --bg: #fbf5f3;
+  --surface: #ffffff;
+  --ink: #26131d;
+  --muted: #76616b;
+  --line: #eadcd7;
+  --lacquer: #c8184a;
+  color-scheme: light;
+  font-family: "Figtree", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #150b10;
+    --surface: #20121a;
+    --ink: #f6e9ef;
+    --muted: #b59ca8;
+    --line: #3a2430;
+    --lacquer: #ff4f7b;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); line-height: 1.6; }
+.strona { max-width: 640px; margin: 0 auto; padding: 48px 20px 64px; display: flex; flex-direction: column; gap: 24px; }
+.marka { display: flex; align-items: center; gap: 14px; }
+.znak { width: 56px; height: auto; color: var(--ink); flex: none; }
+.znak .kropka { fill: var(--lacquer); stroke: var(--bg); }
+h1 { margin: 0; font-size: clamp(2.2rem, 8vw, 3.4rem); line-height: 1.05; letter-spacing: -0.03em; }
+h2 { margin: 0 0 8px; font-size: 1.2rem; }
+.lead { margin: 0; font-size: 1.2rem; }
+.karta { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 20px 22px; }
+.karta ul { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 6px; }
+.start { margin: 0; color: var(--muted); }
